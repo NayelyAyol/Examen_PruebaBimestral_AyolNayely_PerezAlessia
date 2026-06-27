@@ -83,10 +83,6 @@ class FirestoreService extends ChangeNotifier {
     ]);
   }
 
-  // ==========================================
-  // OPERACIONES DE SECTORES (CRUD)
-  // ==========================================
-
   // Escuchar sectores en tiempo real
   Stream<List<SectorModel>> getSectorsStream() {
     if (_isFirebaseInitialized) {
@@ -137,16 +133,12 @@ class FirestoreService extends ChangeNotifier {
     }
   }
 
-  // ==========================================
-  // OPERACIONES DE COORDINADORES (CRUD)
-  // ==========================================
-
   // Escuchar coordinadores en tiempo real (de la colección usuarios con rol coordinador_brigada)
   Stream<List<CoordinatorModel>> getCoordinatorsStream() {
     if (_isFirebaseInitialized) {
       return _db
           .collection('usuarios')
-          .where('role', isEqualTo: 'coordinador_brigada')
+          .where('rol', isEqualTo: 'coordinador_brigada')
           .snapshots()
           .map((snapshot) {
         return snapshot.docs.map((doc) {
@@ -163,7 +155,7 @@ class FirestoreService extends ChangeNotifier {
     if (_isFirebaseInitialized) {
       // Guardar perfil en la colección usuarios
       Map<String, dynamic> data = coordinator.toMap();
-      data['role'] = 'coordinador_brigada';
+      data['rol'] = 'coordinador_brigada';
       data['isFirstLogin'] = true;
       data['name'] = coordinator.nombreCompleto; // Campo name para login
       await _db.collection('usuarios').doc(uid).set(data);
@@ -182,7 +174,7 @@ class FirestoreService extends ChangeNotifier {
   Future<void> updateCoordinator(CoordinatorModel coordinator) async {
     if (_isFirebaseInitialized) {
       Map<String, dynamic> data = coordinator.toMap();
-      data['role'] = 'coordinador_brigada';
+      data['rol'] = 'coordinador_brigada';
       data['name'] = coordinator.nombreCompleto;
       await _db.collection('usuarios').doc(coordinator.id).update(data);
 

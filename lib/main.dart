@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+import 'firebase_options.dart';
+
 // Importación de Modelos
 import 'models/sector_model.dart';
 import 'models/coordinator_model.dart';
@@ -31,9 +33,9 @@ void main() async {
 
   try {
     // Inicializar Firebase
-    // Si no está configurado (falta google-services.json), lanzará una excepción
-    // que capturaremos para activar el "Modo Demo Local" automáticamente sin crashear.
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     isFirebaseInitialized = true;
     print("====== Firebase inicializado correctamente ======");
   } catch (e) {
@@ -41,9 +43,8 @@ void main() async {
     isFirebaseInitialized = false;
   }
 
-  // Instanciar servicios
-  final authService = AuthService();
-  // El firestoreService recibe si Firebase está inicializado para saber si corre en local o real
+// En main.dart
+  final authService = AuthService(isFirebaseInitialized);
   final firestoreService = FirestoreService(isFirebaseInitialized);
 
   // Ejecutar el Seed automático al iniciar la app

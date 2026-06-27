@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
+import '../firebase_options.dart';
 
 class AuthService extends ChangeNotifier {
   FirebaseAuth get _auth => FirebaseAuth.instance;
@@ -31,28 +33,17 @@ class AuthService extends ChangeNotifier {
     }
   };
 
-  AuthService() {
-    _checkFirebase();
-  }
-
-  // Verifica si Firebase se inicializó correctamente
-  void _checkFirebase() {
-    try {
-      if (FirebaseAuth.instance.app != null) {
-        _isFirebaseInitialized = true;
-        _auth.authStateChanges().listen((User? user) async {
-          if (user != null) {
-            await refreshCurrentUser(user.uid);
-          } else {
-            _currentUser = null;
-            notifyListeners();
-          }
-        });
-      }
-    } catch (e) {
-      _isFirebaseInitialized = false;
-      debugPrint("====== AVISO: Firebase no está configurado. Ejecutando en Modo Demo Local. ======");
-      // Inicializar usuario demo por defecto
+  AuthService(bool isFirebaseInitialized) {
+    _isFirebaseInitialized = isFirebaseInitialized;
+    if (_isFirebaseInitialized) {
+      _auth.authStateChanges().listen((User? user) async {
+        if (user != null) {
+          await refreshCurrentUser(user.uid);
+        } else {
+          _currentUser = null;
+          notifyListeners();
+        }
+      });
     }
   }
 
@@ -91,7 +82,7 @@ class AuthService extends ChangeNotifier {
           uid: u['uid'],
           email: trimmedEmail,
           name: u['name'],
-          role: u['role'],
+          rol: u['role'],
           isFirstLogin: u['isFirstLogin'],
         );
         notifyListeners();
@@ -153,7 +144,7 @@ class AuthService extends ChangeNotifier {
             uid: _currentUser!.uid,
             email: email,
             name: _currentUser!.name,
-            role: _currentUser!.role,
+            rol: _currentUser!.role,
             isFirstLogin: false,
           );
           notifyListeners();
@@ -165,49 +156,54 @@ class AuthService extends ChangeNotifier {
   // Crear usuario para un Coordinador de Brigada (Exclusivo Administrador)
   // Como Firebase Auth inicia sesión automáticamente al crear usuario, usamos un truco:
   // Guardamos las credenciales del admin actual en memoria, creamos el coordinador, y re-iniciamos sesión como admin.
-  Future<String> createBrigadeCoordinatorUser({
-    required String email,
-    required String name,
-    required String adminEmail,
-    required String adminPassword,
-  }) async {
-    if (_isFirebaseInitialized) {
-      // 1. Crear el usuario del coordinador
-      UserCredential newCred = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: 'Ecuador2026',
-      );
+Future<String> createBrigadeCoordinatorUser({
+  required String email,
+  required String cedula,
+  required String nombres,
+  required String apellidos,
+  required String telefono,
+}) async {
+  if (_isFirebaseInitialized) {
+    // Segunda instancia temporal para no cerrar sesión del admin
+    FirebaseApp tempApp = await Firebase.initializeApp(
+      name: 'tempApp_${DateTime.now().millisecondsSinceEpoch}',
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    try {
+      UserCredential newCred = await FirebaseAuth.instanceFor(app: tempApp)
+          .createUserWithEmailAndPassword(
+            email: email.trim(),
+            password: 'Ecuador2026',
+          );
+
       String uid = newCred.user!.uid;
 
-      // 2. Guardar el perfil en la colección usuarios
       await _db.collection('usuarios').doc(uid).set({
-        'email': email.trim(),
-        'name': name,
-        'role': 'coordinador_brigada',
+        'cedula': cedula,
+        'nombres': nombres,
+        'apellidos': apellidos,
+        'telefono': telefono,
+        'correo': email.trim(),
+        'rol': 'coordinador_brigada',
         'isFirstLogin': true,
       });
 
-      // 3. Cerrar sesión del nuevo coordinador
-      await _auth.signOut();
-
-      // 4. Re-iniciar sesión como Administrador
-      await _auth.signInWithEmailAndPassword(
-        email: adminEmail,
-        password: adminPassword,
-      );
-
       return uid;
-    } else {
-      // Modo Demo
-      String uid = 'demo_coor_${DateTime.now().millisecondsSinceEpoch}';
-      _demoUsers[email.trim()] = {
-        'uid': uid,
-        'name': name,
-        'role': 'coordinador_brigada',
-        'isFirstLogin': true,
-        'password': 'Ecuador2026'
-      };
-      return uid;
+    } finally {
+      await tempApp.delete();
     }
+  } else {
+    // Modo Demo
+    String uid = 'demo_coor_${DateTime.now().millisecondsSinceEpoch}';
+    _demoUsers[email.trim()] = {
+      'uid': uid,
+      'name': '$nombres $apellidos',
+      'role': 'coordinador_brigada',
+      'isFirstLogin': true,
+      'password': 'Ecuador2026'
+    };
+    return uid;
   }
+}
 }

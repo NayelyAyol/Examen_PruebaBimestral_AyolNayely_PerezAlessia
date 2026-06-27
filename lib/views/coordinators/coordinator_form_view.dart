@@ -78,12 +78,13 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
         // CREAR NUEVO COORDINADOR (Auth + Firestore)
         // En un caso de uso real de Firebase Auth cliente, al crear un usuario te autologuea.
         // El auth_service maneja esto de manera segura. En modo Demo añade el usuario localmente.
-        uid = await authService.createBrigadeCoordinatorUser(
-          email: email,
-          name: fullname,
-          adminEmail: authService.currentUser?.email ?? 'campana@vet.com',
-          adminPassword: 'Ecuador2026', // El servicio usará la contraseña pre-almacenada o por defecto
-        );
+      uid = await authService.createBrigadeCoordinatorUser(
+        email: email,
+        cedula: _cedulaController.text.trim(),
+        nombres: nombres,
+        apellidos: apellidos,
+        telefono: _telefonoController.text.trim(),
+      );
       } else {
         // EDITAR COORDINADOR EXISTENTE
         uid = widget.coordinatorToEdit!.id;

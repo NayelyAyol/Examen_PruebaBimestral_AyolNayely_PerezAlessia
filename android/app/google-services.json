@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "928372581368",
+    "project_id": "veterinaria-89de0",
+    "storage_bucket": "veterinaria-89de0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:928372581368:android:fe5c2db4a9169bf58fac0d",
+        "android_client_info": {
+          "package_name": "com.example.flutter_prueba"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACXPR0OvM891JHmEZxyC4Zk6VpJBS85Ek"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
