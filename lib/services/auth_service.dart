@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../firebase_options.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class AuthService extends ChangeNotifier {
   FirebaseAuth get _auth => FirebaseAuth.instance;
@@ -164,37 +166,43 @@ Future<String> createBrigadeCoordinatorUser({
   required String telefono,
 }) async {
   if (_isFirebaseInitialized) {
-    // Segunda instancia temporal para no cerrar sesión del admin
-    FirebaseApp tempApp = await Firebase.initializeApp(
-      name: 'tempApp_${DateTime.now().millisecondsSinceEpoch}',
-      options: DefaultFirebaseOptions.currentPlatform,
+    // Usar REST API en lugar de segunda instancia Firebase (evita error de threading en Windows)
+    const String apiKey = 'AIzaSyASVVO-ElnMJpWBFKRVUwIZc5zXLtmAQH4';
+    
+    final response = await http.post(
+      Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$apiKey'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email.trim(),
+        'password': 'Ecuador2026',
+        'returnSecureToken': false,
+      }),
     );
 
-    try {
-      UserCredential newCred = await FirebaseAuth.instanceFor(app: tempApp)
-          .createUserWithEmailAndPassword(
-            email: email.trim(),
-            password: 'Ecuador2026',
-          );
+    final data = jsonDecode(response.body);
 
-      String uid = newCred.user!.uid;
-
-      await _db.collection('usuarios').doc(uid).set({
-        'cedula': cedula,
-        'nombres': nombres,
-        'apellidos': apellidos,
-        'telefono': telefono,
-        'correo': email.trim(),
-        'rol': 'coordinador_brigada',
-        'isFirstLogin': true,
-      });
-
-      return uid;
-    } finally {
-      await tempApp.delete();
+    if (response.statusCode != 200) {
+      throw Exception(data['error']['message'] ?? 'Error al crear usuario');
     }
+
+    final String uid = data['localId'];
+
+    // Guardar en Firestore
+    await _db.collection('usuarios').doc(uid).set({
+      'cedula': cedula,
+      'nombres': nombres,
+      'apellidos': apellidos,
+      'telefono': telefono,
+      'correo': email.trim(),
+      'email': email.trim(),
+      'name': '$nombres $apellidos',
+      'rol': 'coordinador_brigada',
+      'isFirstLogin': true,
+    });
+
+    return uid;
   } else {
-    // Modo Demo
+    // Modo Demo (sin cambios)
     String uid = 'demo_coor_${DateTime.now().millisecondsSinceEpoch}';
     _demoUsers[email.trim()] = {
       'uid': uid,

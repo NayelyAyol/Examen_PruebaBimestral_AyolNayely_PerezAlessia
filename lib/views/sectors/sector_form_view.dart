@@ -73,23 +73,30 @@ class _SectorFormViewState extends State<SectorFormView> {
         assignedCoordinatorName: _selectedCoordinatorName,
       );
 
-      if (widget.sectorToEdit == null) {
-        // Crear sector
-        await firestoreService.addSector(sector);
-      } else {
-        // Editar sector
-        await firestoreService.updateSector(sector);
-      }
-
-      // Si se le asignó un coordinador, actualizar también los sectores asignados en el coordinador.
-      if (_selectedCoordinatorId != null) {
-        // Hacemos una sincronización rápida
-        await firestoreService.syncSectorAssignments(
-          _selectedCoordinatorId!,
-          _selectedCoordinatorName ?? '',
-          [sector.id], // Asigna a este sector
-        );
-      }
+if (widget.sectorToEdit == null) {
+  // Crear sector y obtener el ID generado
+  String newId = await firestoreService.addSector(sector);
+  
+  // Sincronizar coordinador con el ID real
+  if (_selectedCoordinatorId != null) {
+    await firestoreService.syncSectorAssignments(
+      _selectedCoordinatorId!,
+      _selectedCoordinatorName ?? '',
+      [newId], // ← ahora sí tiene el ID correcto
+    );
+  }
+} else {
+  // Editar sector
+  await firestoreService.updateSector(sector);
+  
+  if (_selectedCoordinatorId != null) {
+    await firestoreService.syncSectorAssignments(
+      _selectedCoordinatorId!,
+      _selectedCoordinatorName ?? '',
+      [sector.id],
+    );
+  }
+}
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

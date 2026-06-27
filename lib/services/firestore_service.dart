@@ -98,15 +98,15 @@ class FirestoreService extends ChangeNotifier {
   }
 
   // Crear un sector
-  Future<void> addSector(SectorModel sector) async {
+  Future<String> addSector(SectorModel sector) async {
     if (_isFirebaseInitialized) {
-      // Firestore Real
-      await _db.collection('sectores').add(sector.toMap());
+      DocumentReference ref = await _db.collection('sectores').add(sector.toMap());
+      return ref.id; 
     } else {
-      // Modo Demo
       String newId = 'sec_${DateTime.now().millisecondsSinceEpoch}';
       _demoSectors.add(sector.copyWith(id: newId));
       notifyListeners();
+      return newId;
     }
   }
 

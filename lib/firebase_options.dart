@@ -23,20 +23,14 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -65,5 +59,23 @@ class DefaultFirebaseOptions {
     messagingSenderId: '928372581368',
     projectId: 'veterinaria-89de0',
     storageBucket: 'veterinaria-89de0.firebasestorage.app',
+  );
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyAB2hjVIHTa83Gg49IZTntGJ4SZCq3u67Q',
+    appId: '1:928372581368:ios:9e62be7c5ba3013c8fac0d',
+    messagingSenderId: '928372581368',
+    projectId: 'veterinaria-89de0',
+    storageBucket: 'veterinaria-89de0.firebasestorage.app',
+    iosBundleId: 'com.example.flutterPrueba',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyASVVO-ElnMJpWBFKRVUwIZc5zXLtmAQH4',
+    appId: '1:928372581368:web:2a543cffbad0fd1f8fac0d',
+    messagingSenderId: '928372581368',
+    projectId: 'veterinaria-89de0',
+    authDomain: 'veterinaria-89de0.firebaseapp.com',
+    storageBucket: 'veterinaria-89de0.firebasestorage.app',
+    measurementId: 'G-24N15Y9T5R',
   );
 }
