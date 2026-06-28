@@ -7,6 +7,9 @@ import 'firebase_options.dart';
 // Importación de Modelos
 import 'models/sector_model.dart';
 import 'models/coordinator_model.dart';
+import 'models/vaccinator_model.dart';
+import 'views/vaccinators/vaccinators_page.dart';
+import 'views/vaccinators/vaccinator_form_page.dart';
 
 // Importación de Servicios
 import 'services/auth_service.dart';
@@ -39,11 +42,13 @@ void main() async {
     isFirebaseInitialized = true;
     print("====== Firebase inicializado correctamente ======");
   } catch (e) {
-    print("====== AVISO: Firebase no está configurado. Ejecutando en Modo Demo Local. Error: $e ======");
+    print(
+      "====== AVISO: Firebase no está configurado. Ejecutando en Modo Demo Local. Error: $e ======",
+    );
     isFirebaseInitialized = false;
   }
 
-// En main.dart
+  // En main.dart
   final authService = AuthService(isFirebaseInitialized);
   final firestoreService = FirestoreService(isFirebaseInitialized);
 
@@ -71,7 +76,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: VetTheme.lightTheme,
       initialRoute: '/login',
-      
+
       // Rutas fijas sencillas
       routes: {
         '/login': (context) => const LoginView(),
@@ -81,6 +86,7 @@ class MyApp extends StatelessWidget {
         '/brigada_dashboard': (context) => const BrigadaDashboard(),
         '/sectors': (context) => const SectorsListView(),
         '/coordinators': (context) => const CoordinatorsListView(),
+        '/vaccinators': (context) => const VaccinatorsPage(),
       },
 
       // OnGenerateRoute para rutas que requieren pasar parámetros dinámicos
@@ -92,9 +98,19 @@ class MyApp extends StatelessWidget {
           );
         }
         if (settings.name == '/coordinator_form') {
-          final CoordinatorModel? coordinator = settings.arguments as CoordinatorModel?;
+          final CoordinatorModel? coordinator =
+              settings.arguments as CoordinatorModel?;
           return MaterialPageRoute(
-            builder: (context) => CoordinatorFormView(coordinatorToEdit: coordinator),
+            builder: (context) =>
+                CoordinatorFormView(coordinatorToEdit: coordinator),
+          );
+        }
+        if (settings.name == '/vaccinator_form') {
+          final VaccinatorModel? vaccinator =
+              settings.arguments as VaccinatorModel?;
+          return MaterialPageRoute(
+            builder: (context) =>
+                VaccinatorFormPage(vaccinatorToEdit: vaccinator),
           );
         }
         return null;

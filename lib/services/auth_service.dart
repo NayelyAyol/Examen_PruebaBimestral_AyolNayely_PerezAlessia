@@ -262,7 +262,6 @@ class AuthService extends ChangeNotifier {
         'email': email.trim(),
         'name': '$nombres $apellidos',
         'rol': 'vacunador',
-        'role': 'vacunador',
         'isFirstLogin': true,
         'status': 'Activo',
         'assignedSectorIds': [],

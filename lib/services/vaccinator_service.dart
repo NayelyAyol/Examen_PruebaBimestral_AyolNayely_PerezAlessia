@@ -41,7 +41,6 @@ class VaccinatorService extends ChangeNotifier {
     final data = vaccinator.toMap();
 
     data['rol'] = 'vacunador';
-    data['role'] = 'vacunador';
     data['name'] = vaccinator.nombreCompleto;
     data['isFirstLogin'] = true;
 
@@ -53,7 +52,6 @@ class VaccinatorService extends ChangeNotifier {
     final data = vaccinator.toMap();
 
     data['rol'] = 'vacunador';
-    data['role'] = 'vacunador';
     data['name'] = vaccinator.nombreCompleto;
 
     await _db.collection('usuarios').doc(vaccinator.id).update(data);

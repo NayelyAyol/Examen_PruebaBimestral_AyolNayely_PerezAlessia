@@ -36,8 +36,11 @@ class BrigadaDashboard extends StatelessWidget {
           stream: firestoreService.getSectorsStream(),
           builder: (context, snapshot) {
             final sectors = snapshot.data ?? [];
+
             // Filtrar sólo los sectores asignados a este coordinador
-            final mySectors = sectors.where((s) => s.assignedCoordinatorId == user?.uid).toList();
+            final mySectors = sectors
+                .where((s) => s.assignedCoordinatorId == user?.uid)
+                .toList();
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
@@ -51,7 +54,11 @@ class BrigadaDashboard extends StatelessWidget {
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: VetTheme.primary.withOpacity(0.2),
-                          child: const Icon(Icons.pets, color: VetTheme.primary, size: 30),
+                          child: const Icon(
+                            Icons.pets,
+                            color: VetTheme.primary,
+                            size: 30,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -69,12 +76,46 @@ class BrigadaDashboard extends StatelessWidget {
                               const SizedBox(height: 4),
                               const Text(
                                 'Coordinador de Brigada',
-                                style: TextStyle(color: VetTheme.textLight, fontSize: 13),
+                                style: TextStyle(
+                                  color: VetTheme.textLight,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Acceso a la gestión de vacunadores
+                  GlassCard(
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.vaccines_outlined,
+                        color: VetTheme.primary,
+                        size: 32,
+                      ),
+                      title: const Text(
+                        'Gestionar Vacunadores',
+                        style: TextStyle(
+                          color: VetTheme.textDark,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Crear, editar y asignar vacunadores a sectores',
+                        style: TextStyle(color: VetTheme.textLight),
+                      ),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: VetTheme.textLight,
+                      ),
+                      onTap: () {
+                        Navigator.pushNamed(context, '/vaccinators');
+                      },
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -96,12 +137,19 @@ class BrigadaDashboard extends StatelessWidget {
                         padding: const EdgeInsets.all(20.0),
                         child: Column(
                           children: [
-                            Icon(Icons.assignment_late_outlined, size: 48, color: VetTheme.textLight.withOpacity(0.5)),
+                            Icon(
+                              Icons.assignment_late_outlined,
+                              size: 48,
+                              color: VetTheme.textLight.withOpacity(0.5),
+                            ),
                             const SizedBox(height: 12),
                             const Text(
                               'No tienes sectores asignados en este momento.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: VetTheme.textLight, fontSize: 15),
+                              style: TextStyle(
+                                color: VetTheme.textLight,
+                                fontSize: 15,
+                              ),
                             ),
                           ],
                         ),
@@ -112,14 +160,19 @@ class BrigadaDashboard extends StatelessWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: mySectors.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 16),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         final sector = mySectors[index];
-                        return _buildSectorCard(context, firestoreService, sector);
+                        return _buildSectorCard(
+                          context,
+                          firestoreService,
+                          sector,
+                        );
                       },
                     ),
                   const SizedBox(height: 24),
-                  
+
                   // Información de ayuda de roles en modo demo
                   GlassCard(
                     child: Column(
@@ -127,18 +180,30 @@ class BrigadaDashboard extends StatelessWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.info_outline, color: VetTheme.primary, size: 20),
+                            Icon(
+                              Icons.info_outline,
+                              color: VetTheme.primary,
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Información del Rol',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: VetTheme.textDark, fontSize: 15),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: VetTheme.textDark,
+                                fontSize: 15,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Como Coordinador de Brigada, puedes ver tus sectores asignados y actualizar su estado. Para gestionar brigadas o crear sectores, comunícate con el Coordinador de Campaña.',
-                          style: TextStyle(color: VetTheme.textLight.withOpacity(0.9), fontSize: 13, height: 1.4),
+                          'Como Coordinador de Brigada, puedes ver tus sectores asignados, actualizar su estado y gestionar los vacunadores de tu brigada.',
+                          style: TextStyle(
+                            color: VetTheme.textLight.withOpacity(0.9),
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
                         ),
                       ],
                     ),
@@ -152,7 +217,11 @@ class BrigadaDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildSectorCard(BuildContext context, FirestoreService firestoreService, SectorModel sector) {
+  Widget _buildSectorCard(
+    BuildContext context,
+    FirestoreService firestoreService,
+    SectorModel sector,
+  ) {
     Color statusColor = VetTheme.textLight;
     if (sector.status == 'En Proceso') statusColor = Colors.orange;
     if (sector.status == 'Completado') statusColor = Colors.green;
@@ -167,11 +236,16 @@ class BrigadaDashboard extends StatelessWidget {
               Expanded(
                 child: Text(
                   sector.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: VetTheme.textDark, fontSize: 18),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: VetTheme.textDark,
+                    fontSize: 18,
+                  ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
@@ -179,30 +253,64 @@ class BrigadaDashboard extends StatelessWidget {
                 ),
                 child: Text(
                   sector.status,
-                  style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('Zona: ${sector.zone}', style: const TextStyle(color: VetTheme.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(
+            'Zona: ${sector.zone}',
+            style: const TextStyle(
+              color: VetTheme.primary,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             sector.description,
-            style: const TextStyle(color: VetTheme.textLight, fontSize: 14, height: 1.4),
+            style: const TextStyle(
+              color: VetTheme.textLight,
+              fontSize: 14,
+              height: 1.4,
+            ),
           ),
           const Divider(height: 24, thickness: 1, color: VetTheme.glassBorder),
-          
+
           // Cambiar de estado rápido
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Actualizar estado:', style: TextStyle(color: VetTheme.textDark, fontWeight: FontWeight.w600, fontSize: 14)),
+              const Text(
+                'Actualizar estado:',
+                style: TextStyle(
+                  color: VetTheme.textDark,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
               Row(
                 children: [
-                  _statusButton(context, firestoreService, sector, 'En Proceso', Colors.orange),
+                  _statusButton(
+                    context,
+                    firestoreService,
+                    sector,
+                    'En Proceso',
+                    Colors.orange,
+                  ),
                   const SizedBox(width: 8),
-                  _statusButton(context, firestoreService, sector, 'Completado', Colors.green),
+                  _statusButton(
+                    context,
+                    firestoreService,
+                    sector,
+                    'Completado',
+                    Colors.green,
+                  ),
                 ],
               ),
             ],
@@ -212,18 +320,28 @@ class BrigadaDashboard extends StatelessWidget {
     );
   }
 
-  Widget _statusButton(BuildContext context, FirestoreService firestoreService, SectorModel sector, String targetStatus, Color color) {
+  Widget _statusButton(
+    BuildContext context,
+    FirestoreService firestoreService,
+    SectorModel sector,
+    String targetStatus,
+    Color color,
+  ) {
     final bool isCurrent = sector.status == targetStatus;
+
     return ElevatedButton(
       onPressed: isCurrent
           ? null
           : () async {
-              SectorModel updatedSector = sector.copyWith(status: targetStatus);
+              SectorModel updatedSector =
+                  sector.copyWith(status: targetStatus);
               await firestoreService.updateSector(updatedSector);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Sector "${sector.name}" actualizado a $targetStatus'),
+                    content: Text(
+                      'Sector "${sector.name}" actualizado a $targetStatus',
+                    ),
                     backgroundColor: color,
                   ),
                 );
@@ -237,7 +355,10 @@ class BrigadaDashboard extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      child: Text(targetStatus, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+      child: Text(
+        targetStatus,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+      ),
     );
   }
 }
