@@ -8,25 +8,40 @@ import 'firebase_options.dart';
 import 'models/sector_model.dart';
 import 'models/coordinator_model.dart';
 import 'models/vaccinator_model.dart';
-import 'views/vaccinators/vaccinators_page.dart';
-import 'views/vaccinators/vaccinator_form_page.dart';
+import 'models/vaccination_model.dart';
 
 // Importación de Servicios
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/seed_service.dart';
 
-// Importación de Tema y Vistas
+// Importación de Tema
 import 'theme/vet_theme.dart';
+
+// Importación de Vistas Auth
 import 'views/auth/login_view.dart';
 import 'views/auth/forgot_password_view.dart';
 import 'views/auth/change_password_view.dart';
+
+// Importación de Vistas Dashboard
 import 'views/dashboard/campana_dashboard.dart';
 import 'views/dashboard/brigada_dashboard.dart';
+
+// Importación de Vistas Sectores
 import 'views/sectors/sectors_list_view.dart';
 import 'views/sectors/sector_form_view.dart';
+
+// Importación de Vistas Coordinadores
 import 'views/coordinators/coordinators_list_view.dart';
 import 'views/coordinators/coordinator_form_view.dart';
+
+// Importación de Vistas Vacunadores
+import 'views/vaccinators/vaccinators_page.dart';
+import 'views/vaccinators/vaccinator_form_page.dart';
+
+// Importación de Vistas Vacunaciones
+import 'views/vaccinations/vaccinations_page.dart';
+import 'views/vaccinations/vaccination_form_page.dart';
 
 void main() async {
   // Asegurar que Flutter esté inicializado
@@ -48,7 +63,7 @@ void main() async {
     isFirebaseInitialized = false;
   }
 
-  // En main.dart
+  // Inicializar servicios principales
   final authService = AuthService(isFirebaseInitialized);
   final firestoreService = FirestoreService(isFirebaseInitialized);
 
@@ -87,6 +102,7 @@ class MyApp extends StatelessWidget {
         '/sectors': (context) => const SectorsListView(),
         '/coordinators': (context) => const CoordinatorsListView(),
         '/vaccinators': (context) => const VaccinatorsPage(),
+        '/vaccinations': (context) => const VaccinationsPage(),
       },
 
       // OnGenerateRoute para rutas que requieren pasar parámetros dinámicos
@@ -97,6 +113,7 @@ class MyApp extends StatelessWidget {
             builder: (context) => SectorFormView(sectorToEdit: sector),
           );
         }
+
         if (settings.name == '/coordinator_form') {
           final CoordinatorModel? coordinator =
               settings.arguments as CoordinatorModel?;
@@ -105,6 +122,7 @@ class MyApp extends StatelessWidget {
                 CoordinatorFormView(coordinatorToEdit: coordinator),
           );
         }
+
         if (settings.name == '/vaccinator_form') {
           final VaccinatorModel? vaccinator =
               settings.arguments as VaccinatorModel?;
@@ -113,6 +131,16 @@ class MyApp extends StatelessWidget {
                 VaccinatorFormPage(vaccinatorToEdit: vaccinator),
           );
         }
+
+        if (settings.name == '/vaccination_form') {
+          final VaccinationModel? vaccination =
+              settings.arguments as VaccinationModel?;
+          return MaterialPageRoute(
+            builder: (context) =>
+                VaccinationFormPage(vaccinationToEdit: vaccination),
+          );
+        }
+
         return null;
       },
     );

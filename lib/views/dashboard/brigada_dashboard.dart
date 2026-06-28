@@ -12,7 +12,10 @@ class BrigadaDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final firestoreService = Provider.of<FirestoreService>(
+      context,
+      listen: false,
+    );
     final user = authService.currentUser;
 
     return Scaffold(
@@ -118,6 +121,37 @@ class BrigadaDashboard extends StatelessWidget {
                       },
                     ),
                   ),
+                  // Acceso al registro de vacunaciones
+                  const SizedBox(height: 16),
+
+                  GlassCard(
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.assignment_turned_in_outlined,
+                        color: VetTheme.primary,
+                        size: 32,
+                      ),
+                      title: const Text(
+                        'Registrar Vacunaciones',
+                        style: TextStyle(
+                          color: VetTheme.textDark,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Registrar, editar y consultar vacunaciones realizadas',
+                        style: TextStyle(color: VetTheme.textLight),
+                      ),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        color: VetTheme.textLight,
+                        size: 16,
+                      ),
+                      onTap: () {
+                        Navigator.pushNamed(context, '/vaccinations');
+                      },
+                    ),
+                  ),
                   const SizedBox(height: 28),
 
                   const Text(
@@ -207,7 +241,7 @@ class BrigadaDashboard extends StatelessWidget {
                         ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             );
@@ -244,8 +278,10 @@ class BrigadaDashboard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
@@ -333,8 +369,7 @@ class BrigadaDashboard extends StatelessWidget {
       onPressed: isCurrent
           ? null
           : () async {
-              SectorModel updatedSector =
-                  sector.copyWith(status: targetStatus);
+              SectorModel updatedSector = sector.copyWith(status: targetStatus);
               await firestoreService.updateSector(updatedSector);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
