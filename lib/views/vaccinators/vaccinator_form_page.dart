@@ -27,18 +27,14 @@ class VaccinatorFormPage extends StatefulWidget {
 class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controladores del formulario
   late TextEditingController _cedulaController;
   late TextEditingController _nombresController;
   late TextEditingController _apellidosController;
   late TextEditingController _telefonoController;
   late TextEditingController _emailController;
 
-  // Servicios
   final VaccinatorService _vaccinatorService = VaccinatorService();
 
-  // Variables de estado
-  String _selectedStatus = 'Activo';
   List<String> _assignedSectorIds = [];
   bool _isLoading = false;
 
@@ -48,7 +44,6 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
   void initState() {
     super.initState();
 
-    // Inicializa los datos del formulario
     _cedulaController = TextEditingController(
       text: widget.vaccinatorToEdit?.cedula ?? '',
     );
@@ -65,10 +60,10 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
       text: widget.vaccinatorToEdit?.email ?? '',
     );
 
-    // Carga datos si se está editando
     if (isEditing) {
-      _selectedStatus = widget.vaccinatorToEdit!.status;
-      _assignedSectorIds = List.from(widget.vaccinatorToEdit!.assignedSectorIds);
+      _assignedSectorIds = List<String>.from(
+        widget.vaccinatorToEdit!.assignedSectorIds,
+      );
     }
   }
 
@@ -82,9 +77,26 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
     super.dispose();
   }
 
-  // Guarda o actualiza el vacunador
+  bool _hasOnlyLetters(String value) {
+    return RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$').hasMatch(value.trim());
+  }
+
+  bool _hasOnlyNumbers(String value) {
+    return RegExp(r'^[0-9]+$').hasMatch(value.trim());
+  }
+
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_assignedSectorIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecciona al menos un sector para el vacunador.'),
+          backgroundColor: VetTheme.accent,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -111,7 +123,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
         apellidos: _apellidosController.text.trim(),
         telefono: _telefonoController.text.trim(),
         email: _emailController.text.trim(),
-        status: _selectedStatus,
+        status: 'Activo',
         assignedSectorIds: _assignedSectorIds,
       );
 
@@ -145,13 +157,10 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Filtra sectores según el rol del usuario actual
   List<SectorModel> _filterSectorsByRole(
     List<SectorModel> sectors,
     UserModel? user,
@@ -167,7 +176,6 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
     return sectors;
   }
 
-  // Construye la lista de sectores asignables
   Widget _buildSectorsList(
     FirestoreService firestoreService,
     UserModel? currentUser,
@@ -235,7 +243,9 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
                 onChanged: (checked) {
                   setState(() {
                     if (checked == true) {
-                      _assignedSectorIds.add(sector.id);
+                      if (!_assignedSectorIds.contains(sector.id)) {
+                        _assignedSectorIds.add(sector.id);
+                      }
                     } else {
                       _assignedSectorIds.remove(sector.id);
                     }
@@ -249,7 +259,6 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
     );
   }
 
-  // Construye la interfaz
   @override
   Widget build(BuildContext context) {
     final firestoreService = Provider.of<FirestoreService>(context);
@@ -291,7 +300,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
                           const SizedBox(height: 6),
                           Text(
                             isEditing
-                                ? 'Actualiza la información y sectores asignados.'
+                                ? 'Actualiza la información y reasigna sectores.'
                                 : 'La contraseña inicial será Ecuador2026.',
                             style: const TextStyle(
                               color: VetTheme.textLight,
@@ -306,12 +315,18 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
                             prefixIcon: Icons.badge_outlined,
                             keyboardType: TextInputType.number,
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'La cédula es obligatoria';
                               }
-                              if (value.trim().length != 10) {
+                              if (!_hasOnlyNumbers(text)) {
+                                return 'La cédula solo debe contener números';
+                              }
+                              if (text.length != 10) {
                                 return 'La cédula debe tener 10 dígitos';
                               }
+
                               return null;
                             },
                           ),
@@ -322,9 +337,15 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
                             labelText: 'Nombres',
                             prefixIcon: Icons.person_outline,
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'Los nombres son obligatorios';
                               }
+                              if (!_hasOnlyLetters(text)) {
+                                return 'Los nombres solo deben contener letras';
+                              }
+
                               return null;
                             },
                           ),
@@ -335,9 +356,15 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
                             labelText: 'Apellidos',
                             prefixIcon: Icons.person_outline,
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'Los apellidos son obligatorios';
                               }
+                              if (!_hasOnlyLetters(text)) {
+                                return 'Los apellidos solo deben contener letras';
+                              }
+
                               return null;
                             },
                           ),
@@ -349,12 +376,18 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
                             prefixIcon: Icons.phone_outlined,
                             keyboardType: TextInputType.phone,
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'El teléfono es obligatorio';
                               }
-                              if (value.trim().length < 9) {
-                                return 'Teléfono inválido';
+                              if (!_hasOnlyNumbers(text)) {
+                                return 'El teléfono solo debe contener números';
                               }
+                              if (text.length != 10) {
+                                return 'El teléfono debe tener 10 dígitos';
+                              }
+
                               return null;
                             },
                           ),
@@ -375,51 +408,27 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
                                   : Colors.white.withOpacity(0.6),
                             ),
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'El correo es obligatorio';
                               }
 
                               final emailRegExp = RegExp(
-                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$',
                               );
 
-                              if (!emailRegExp.hasMatch(value.trim())) {
-                                return 'Correo inválido';
+                              if (!emailRegExp.hasMatch(text)) {
+                                return 'Ingresa un correo electrónico válido';
                               }
 
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
-
-                          DropdownButtonFormField<String>(
-                            value: _selectedStatus,
-                            decoration: const InputDecoration(
-                              labelText: 'Estado',
-                              prefixIcon: Icon(
-                                Icons.power_settings_new,
-                                color: VetTheme.primary,
-                              ),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Activo',
-                                child: Text('Activo'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Inactivo',
-                                child: Text('Inactivo'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value == null) return;
-                              setState(() => _selectedStatus = value);
-                            },
-                          ),
                           const SizedBox(height: 24),
 
                           const Text(
-                            'Asignar sectores',
+                            'Asignar / reasignar sectores',
                             style: TextStyle(
                               color: VetTheme.textDark,
                               fontSize: 16,

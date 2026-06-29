@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/coordinator_model.dart';
@@ -20,30 +21,35 @@ class CoordinatorFormView extends StatefulWidget {
 
 class _CoordinatorFormViewState extends State<CoordinatorFormView> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _cedulaController;
   late TextEditingController _nombresController;
   late TextEditingController _apellidosController;
   late TextEditingController _telefonoController;
   late TextEditingController _emailController;
-  
-  String _selectedStatus = 'Activo';
-  List<String> _assignedSectorIds = [];
 
+  List<String> _assignedSectorIds = [];
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _cedulaController = TextEditingController(text: widget.coordinatorToEdit?.cedula ?? '');
-    _nombresController = TextEditingController(text: widget.coordinatorToEdit?.nombres ?? '');
-    _apellidosController = TextEditingController(text: widget.coordinatorToEdit?.apellidos ?? '');
-    _telefonoController = TextEditingController(text: widget.coordinatorToEdit?.telefono ?? '');
-    _emailController = TextEditingController(text: widget.coordinatorToEdit?.email ?? '');
-    
+
+    _cedulaController =
+        TextEditingController(text: widget.coordinatorToEdit?.cedula ?? '');
+    _nombresController =
+        TextEditingController(text: widget.coordinatorToEdit?.nombres ?? '');
+    _apellidosController =
+        TextEditingController(text: widget.coordinatorToEdit?.apellidos ?? '');
+    _telefonoController =
+        TextEditingController(text: widget.coordinatorToEdit?.telefono ?? '');
+    _emailController =
+        TextEditingController(text: widget.coordinatorToEdit?.email ?? '');
+
     if (widget.coordinatorToEdit != null) {
-      _selectedStatus = widget.coordinatorToEdit!.status;
-      _assignedSectorIds = List<String>.from(widget.coordinatorToEdit!.assignedSectorIds);
+      _assignedSectorIds = List<String>.from(
+        widget.coordinatorToEdit!.assignedSectorIds,
+      );
     }
   }
 
@@ -60,37 +66,31 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
-      final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+      final firestoreService =
+          Provider.of<FirestoreService>(context, listen: false);
 
-      final String email = _emailController.text.trim();
-      final String nombres = _nombresController.text.trim();
-      final String apellidos = _apellidosController.text.trim();
-      final String fullname = '$nombres $apellidos';
+      final email = _emailController.text.trim();
+      final nombres = _nombresController.text.trim();
+      final apellidos = _apellidosController.text.trim();
 
       String uid;
+
       if (widget.coordinatorToEdit == null) {
-        // CREAR NUEVO COORDINADOR (Auth + Firestore)
-        // En un caso de uso real de Firebase Auth cliente, al crear un usuario te autologuea.
-        // El auth_service maneja esto de manera segura. En modo Demo añade el usuario localmente.
-      uid = await authService.createBrigadeCoordinatorUser(
-        email: email,
-        cedula: _cedulaController.text.trim(),
-        nombres: nombres,
-        apellidos: apellidos,
-        telefono: _telefonoController.text.trim(),
-      );
+        uid = await authService.createBrigadeCoordinatorUser(
+          email: email,
+          cedula: _cedulaController.text.trim(),
+          nombres: nombres,
+          apellidos: apellidos,
+          telefono: _telefonoController.text.trim(),
+        );
       } else {
-        // EDITAR COORDINADOR EXISTENTE
         uid = widget.coordinatorToEdit!.id;
       }
 
-      // Crear el modelo del coordinador
       final coordinator = CoordinatorModel(
         id: uid,
         cedula: _cedulaController.text.trim(),
@@ -98,30 +98,33 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
         apellidos: apellidos,
         telefono: _telefonoController.text.trim(),
         email: email,
-        status: _selectedStatus,
+        status: 'Activo',
         assignedSectorIds: _assignedSectorIds,
       );
 
-      // Guardar perfil y sincronizar sectores
       if (widget.coordinatorToEdit == null) {
         await firestoreService.saveCoordinatorProfile(uid, coordinator);
       } else {
         await firestoreService.updateCoordinator(coordinator);
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.coordinatorToEdit == null 
-                ? 'Coordinador creado y registrado en Auth con contraseña Ecuador2026' 
-                : 'Coordinador actualizado correctamente'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.coordinatorToEdit == null
+                ? 'Coordinador creado con contraseña Ecuador2026'
+                : 'Coordinador actualizado correctamente',
           ),
-        );
-        Navigator.pop(context);
-      }
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context);
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al guardar coordinador: $e'),
@@ -129,18 +132,15 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    final bool isEditing = widget.coordinatorToEdit != null;
+    final firestoreService =
+        Provider.of<FirestoreService>(context, listen: false);
+    final isEditing = widget.coordinatorToEdit != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -163,7 +163,9 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isEditing ? 'Modificar Coordinador' : 'Crear Cuenta de Brigadista',
+                        isEditing
+                            ? 'Modificar Coordinador'
+                            : 'Crear Cuenta de Brigadista',
                         style: const TextStyle(
                           color: VetTheme.textDark,
                           fontSize: 18,
@@ -173,12 +175,14 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                       const SizedBox(height: 6),
                       if (!isEditing)
                         const Text(
-                          'Se registrará en Firebase Authentication con la contraseña predeterminada Ecuador2026 y isFirstLogin en true.',
-                          style: TextStyle(color: VetTheme.textLight, fontSize: 12),
+                          'Se registrará con la contraseña predeterminada Ecuador2026.',
+                          style: TextStyle(
+                            color: VetTheme.textLight,
+                            fontSize: 12,
+                          ),
                         ),
                       const SizedBox(height: 20),
 
-                      // Cédula
                       CustomTextField(
                         controller: _cedulaController,
                         labelText: 'Número de Cédula',
@@ -199,7 +203,6 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Nombres
                       CustomTextField(
                         controller: _nombresController,
                         labelText: 'Nombres',
@@ -213,7 +216,6 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Apellidos
                       CustomTextField(
                         controller: _apellidosController,
                         labelText: 'Apellidos',
@@ -227,7 +229,6 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Teléfono
                       CustomTextField(
                         controller: _telefonoController,
                         labelText: 'Número de Teléfono',
@@ -238,56 +239,50 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                             return 'El teléfono es obligatorio';
                           }
                           if (value.trim().length < 9) {
-                            return 'Teléfono inválido (mínimo 9 dígitos)';
+                            return 'Teléfono inválido';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
 
-                      // Correo Electrónico (Deshabilitado en edición para evitar inconsistencias con Auth)
                       TextFormField(
                         controller: _emailController,
                         enabled: !isEditing,
-                        style: TextStyle(color: isEditing ? VetTheme.textLight : VetTheme.textDark, fontSize: 16),
+                        style: TextStyle(
+                          color:
+                              isEditing ? VetTheme.textLight : VetTheme.textDark,
+                          fontSize: 16,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Correo Electrónico',
-                          prefixIcon: const Icon(Icons.email_outlined, color: VetTheme.primary),
-                          fillColor: isEditing ? Colors.black.withOpacity(0.05) : Colors.white.withOpacity(0.6),
+                          prefixIcon: const Icon(
+                            Icons.email_outlined,
+                            color: VetTheme.primary,
+                          ),
+                          fillColor: isEditing
+                              ? Colors.black.withOpacity(0.05)
+                              : Colors.white.withOpacity(0.6),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'El correo es obligatorio';
                           }
-                          final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+                          final emailRegExp = RegExp(
+                            r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$',
+                          );
+
                           if (!emailRegExp.hasMatch(value.trim())) {
                             return 'Ingresa un correo electrónico válido';
                           }
+
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
 
-                      // Dropdown Estado
-                      DropdownButtonFormField<String>(
-                        value: _selectedStatus,
-                        decoration: const InputDecoration(
-                          labelText: 'Estado del Coordinador',
-                          prefixIcon: Icon(Icons.power_settings_new, color: VetTheme.primary),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'Activo', child: Text('Activo')),
-                          DropdownMenuItem(value: 'Inactivo', child: Text('Inactivo')),
-                        ],
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedStatus = val!;
-                          });
-                        },
-                      ),
                       const SizedBox(height: 24),
 
-                      // Selección de Sectores
                       const Text(
                         'Asignar Sectores de Quito',
                         style: TextStyle(
@@ -297,16 +292,19 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      
-                      // Cargar sectores disponibles de Firestore
+
                       StreamBuilder<List<SectorModel>>(
                         stream: firestoreService.getSectorsStream(),
                         builder: (context, snapshot) {
                           final sectors = snapshot.data ?? [];
+
                           if (sectors.isEmpty) {
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text('Cargando sectores disponibles...', style: TextStyle(color: VetTheme.textLight)),
+                              child: Text(
+                                'Cargando sectores disponibles...',
+                                style: TextStyle(color: VetTheme.textLight),
+                              ),
                             );
                           }
 
@@ -314,7 +312,9 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.4),
                               borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: VetTheme.primary.withOpacity(0.15)),
+                              border: Border.all(
+                                color: VetTheme.primary.withOpacity(0.15),
+                              ),
                             ),
                             constraints: const BoxConstraints(maxHeight: 200),
                             child: ListView.builder(
@@ -322,27 +322,38 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                               itemCount: sectors.length,
                               itemBuilder: (context, idx) {
                                 final sector = sectors[idx];
-                                // Un sector se puede asignar si está libre o ya pertenece a este coordinador
-                                final bool isAssignedToOther = sector.assignedCoordinatorId != null &&
-                                    sector.assignedCoordinatorId != widget.coordinatorToEdit?.id;
 
-                                final bool isChecked = _assignedSectorIds.contains(sector.id);
+                                final isAssignedToOther =
+                                    sector.assignedCoordinatorId != null &&
+                                        sector.assignedCoordinatorId !=
+                                            widget.coordinatorToEdit?.id;
+
+                                final isChecked =
+                                    _assignedSectorIds.contains(sector.id);
 
                                 return CheckboxListTile(
                                   activeColor: VetTheme.primary,
-                                  title: Text(sector.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                  title: Text(
+                                    sector.name,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   subtitle: Text(
-                                    isAssignedToOther 
-                                        ? 'Asignado a: ${sector.assignedCoordinatorName}' 
+                                    isAssignedToOther
+                                        ? 'Asignado a: ${sector.assignedCoordinatorName}'
                                         : 'Zona: ${sector.zone}',
                                     style: TextStyle(
-                                      color: isAssignedToOther ? VetTheme.accent : VetTheme.textLight,
+                                      color: isAssignedToOther
+                                          ? VetTheme.accent
+                                          : VetTheme.textLight,
                                       fontSize: 12,
                                     ),
                                   ),
                                   value: isChecked,
-                                  enabled: !isAssignedToOther, // Bloquear si está asignado a otro
-                                  onChanged: (bool? checked) {
+                                  enabled: !isAssignedToOther,
+                                  onChanged: (checked) {
                                     setState(() {
                                       if (checked == true) {
                                         _assignedSectorIds.add(sector.id);
@@ -357,11 +368,13 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
                           );
                         },
                       ),
+
                       const SizedBox(height: 28),
 
-                      // Botón Guardar
                       CustomButton(
-                        text: isEditing ? 'Guardar Cambios' : 'Registrar Coordinador',
+                        text: isEditing
+                            ? 'Guardar Cambios'
+                            : 'Registrar Coordinador',
                         isLoading: _isLoading,
                         onPressed: _handleSave,
                       ),

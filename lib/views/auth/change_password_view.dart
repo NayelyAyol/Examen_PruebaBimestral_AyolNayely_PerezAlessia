@@ -39,7 +39,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
-      
+
       // Llamar al cambio de contraseña en Auth
       await authService.changePassword(
         _currentPasswordController.text,
@@ -52,49 +52,112 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Row(
-              children: [
-                Icon(Icons.lock_reset, color: VetTheme.primary, size: 28),
-                SizedBox(width: 10),
-                Text('Contraseña Actualizada', style: TextStyle(color: VetTheme.textDark, fontWeight: FontWeight.bold)),
-              ],
+        builder: (BuildContext dialogContext) {
+          final width = MediaQuery.of(dialogContext).size.width;
+          final isSmall = width < 420;
+
+          return Dialog(
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isSmall ? 24 : 40,
+              vertical: 24,
             ),
-            content: const Text(
-              'Tu contraseña se ha cambiado exitosamente. Ahora accederás al panel principal.',
-              style: TextStyle(color: VetTheme.textLight, fontSize: 15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Cierra el diálogo
-                  
-                  // Redirigir según el rol del usuario actual
-                  final user = authService.currentUser;
-                  if (user != null) {
-                    if (user.role == 'coordinador_campana') {
-                      Navigator.pushReplacementNamed(context, '/campana_dashboard');
-                    } else {
-                      Navigator.pushReplacementNamed(context, '/brigada_dashboard');
-                    }
-                  } else {
-                    Navigator.pushReplacementNamed(context, '/login');
-                  }
-                },
-                child: const Text(
-                  'Continuar',
-                  style: TextStyle(color: VetTheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: Padding(
+                padding: EdgeInsets.all(isSmall ? 20 : 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: VetTheme.primary.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.lock_reset,
+                        color: VetTheme.primary,
+                        size: 30,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Contraseña actualizada',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: VetTheme.textDark,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Tu contraseña se ha cambiado exitosamente. Ahora accederás al panel principal.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: VetTheme.textLight,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+
+                          final user = authService.currentUser;
+                          if (user != null) {
+                            if (user.role == 'coordinador_campana') {
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/campana_dashboard',
+                              );
+                            } else if (user.role == 'coordinador_brigada') {
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/brigada_dashboard',
+                              );
+                            } else if (user.role == 'vacunador') {
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/vaccinator_dashboard',
+                              );
+                            } else {
+                              Navigator.pushReplacementNamed(context, '/login');
+                            }
+                          } else {
+                            Navigator.pushReplacementNamed(context, '/login');
+                          }
+                        },
+                        child: const Text(
+                          'Continuar',
+                          style: TextStyle(
+                            color: VetTheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           );
         },
       );
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseAuthException: ', '');
+        _errorMessage = e
+            .toString()
+            .replaceAll('Exception: ', '')
+            .replaceAll('FirebaseAuthException: ', '');
       });
     } finally {
       if (mounted) {
@@ -116,12 +179,17 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
       appBar: AppBar(
         // Si es cambio forzado, no permitimos regresar atrás para que no evadan el cambio de contraseña
         leading: isForced
-            ? const SizedBox() 
+            ? const SizedBox()
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: VetTheme.textDark),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: VetTheme.textDark,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
-        title: Text(isForced ? 'Primer Inicio de Sesión' : 'Cambiar Contraseña'),
+        title: Text(
+          isForced ? 'Primer Inicio de Sesión' : 'Cambiar Contraseña',
+        ),
       ),
       body: Container(
         decoration: VetTheme.backgroundGradient,
@@ -151,10 +219,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                     ? 'Por seguridad, debes cambiar tu contraseña inicial asignada (Ecuador2026) antes de ingresar al sistema.'
                     : 'Ingresa tu contraseña actual y la nueva contraseña para actualizar tu cuenta.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: VetTheme.textLight,
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: VetTheme.textLight, fontSize: 14),
               ),
               const SizedBox(height: 32),
 
@@ -170,11 +235,16 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                           decoration: BoxDecoration(
                             color: VetTheme.accent.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: VetTheme.accent.withOpacity(0.3)),
+                            border: Border.all(
+                              color: VetTheme.accent.withOpacity(0.3),
+                            ),
                           ),
                           child: Text(
                             _errorMessage!,
-                            style: const TextStyle(color: VetTheme.accent, fontSize: 14),
+                            style: const TextStyle(
+                              color: VetTheme.accent,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -239,14 +309,17 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                         isLoading: _isLoading,
                         onPressed: _handleChangePassword,
                       ),
-                      
+
                       if (isForced) ...[
                         const SizedBox(height: 16),
                         CustomButton(
                           text: 'Salir / Cancelar',
                           isSecondary: true,
                           onPressed: () {
-                            Provider.of<AuthService>(context, listen: false).logout();
+                            Provider.of<AuthService>(
+                              context,
+                              listen: false,
+                            ).logout();
                             Navigator.pushReplacementNamed(context, '/login');
                           },
                         ),
