@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/vaccination_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/storage_service.dart';
 import '../../services/vaccination_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/custom_button.dart';
@@ -35,6 +36,7 @@ class VaccinationFormPage extends StatefulWidget {
 class _VaccinationFormPageState extends State<VaccinationFormPage> {
   final _formKey = GlobalKey<FormState>();
   final VaccinationService _vaccinationService = VaccinationService();
+  final StorageService _storageService = StorageService();
   final ImagePicker _picker = ImagePicker();
 
   final _ownerNameCtrl = TextEditingController();
@@ -291,7 +293,17 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
     setState(() => _isLoading = true);
 
     try {
-      final photoPath = await _savePhotoLocally();
+      final localPhotoPath = await _savePhotoLocally();
+      String finalPhotoPath = localPhotoPath;
+
+      if (authService.isFirebaseInitialized && _selectedImageBytes != null) {
+        try {
+          finalPhotoPath = await _storageService.uploadVaccinationPhoto(File(localPhotoPath));
+        } catch (storageError) {
+          debugPrint("Error al subir a Firebase Storage, usando path local: $storageError");
+          finalPhotoPath = localPhotoPath;
+        }
+      }
 
       final vaccination = VaccinationModel(
         id: widget.vaccinationToEdit?.id ?? '',
@@ -304,7 +316,7 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
         sexo: _petGender,
         vacunaAplicada: _vaccineCtrl.text.trim(),
         observaciones: _obsCtrl.text.trim(),
-        fotografia: photoPath,
+        fotografia: finalPhotoPath,
         latitud: _latitude,
         longitud: _longitude,
         fechaHora: widget.vaccinationToEdit?.fechaHora ?? DateTime.now(),
