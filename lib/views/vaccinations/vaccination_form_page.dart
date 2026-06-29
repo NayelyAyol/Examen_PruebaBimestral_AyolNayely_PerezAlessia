@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,16 +15,12 @@ import '../../services/storage_service.dart';
 import '../../services/vaccination_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/custom_button.dart';
-import '../../widgets/custom_textfield.dart';
 import '../../widgets/glass_card.dart';
 
 class VaccinationFormPage extends StatefulWidget {
   final VaccinationModel? vaccinationToEdit;
 
-  const VaccinationFormPage({
-    super.key,
-    this.vaccinationToEdit,
-  });
+  const VaccinationFormPage({super.key, this.vaccinationToEdit});
 
   @override
   State<VaccinationFormPage> createState() => _VaccinationFormPageState();
@@ -83,9 +80,7 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
     _petNameController = TextEditingController(
       text: vaccination?.petName ?? '',
     );
-    _petAgeController = TextEditingController(
-      text: vaccination?.petAge ?? '',
-    );
+    _petAgeController = TextEditingController(text: vaccination?.petAge ?? '');
     _vaccineNameController = TextEditingController(
       text: vaccination?.vaccineName ?? '',
     );
@@ -118,85 +113,85 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
   }
 
   // Muestra opciones para tomar foto o escoger desde galería
-void _showPhotoOptions() {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return SafeArea(
-        child: SingleChildScrollView(
-          child: Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.all(Radius.circular(26)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.black12,
-                      borderRadius: BorderRadius.circular(20),
+  void _showPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(26)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.black12,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 14),
+                  const SizedBox(height: 14),
 
-                const Text(
-                  'Fotografía de evidencia',
-                  style: TextStyle(
-                    color: VetTheme.textDark,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  const Text(
+                    'Fotografía de evidencia',
+                    style: TextStyle(
+                      color: VetTheme.textDark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
+                  const SizedBox(height: 6),
 
-                const Text(
-                  'Puedes tomar una foto o escoger una imagen del teléfono.',
-                  style: TextStyle(
-                    color: VetTheme.textLight,
-                    fontSize: 13,
-                    height: 1.35,
+                  const Text(
+                    'Puedes tomar una foto o escoger una imagen del teléfono.',
+                    style: TextStyle(
+                      color: VetTheme.textLight,
+                      fontSize: 13,
+                      height: 1.35,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
+                  const SizedBox(height: 14),
 
-                _PhotoOptionTile(
-                  icon: Icons.camera_alt_outlined,
-                  title: 'Tomar foto',
-                  subtitle: 'Abrir cámara del celular',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickPhoto(ImageSource.camera);
-                  },
-                ),
-                const SizedBox(height: 8),
+                  _PhotoOptionTile(
+                    icon: Icons.camera_alt_outlined,
+                    title: 'Tomar foto',
+                    subtitle: 'Abrir cámara del celular',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickPhoto(ImageSource.camera);
+                    },
+                  ),
+                  const SizedBox(height: 8),
 
-                _PhotoOptionTile(
-                  icon: Icons.photo_library_outlined,
-                  title: 'Escoger de galería',
-                  subtitle: 'Seleccionar una foto existente',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickPhoto(ImageSource.gallery);
-                  },
-                ),
-              ],
+                  _PhotoOptionTile(
+                    icon: Icons.photo_library_outlined,
+                    title: 'Escoger de galería',
+                    subtitle: 'Seleccionar una foto existente',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickPhoto(ImageSource.gallery);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   // Selecciona foto desde cámara o galería
   Future<void> _pickPhoto(ImageSource source) async {
@@ -276,10 +271,7 @@ void _showPhotoOptions() {
       'https://www.google.com/maps/search/?api=1&query=$_latitude,$_longitude',
     );
 
-    final opened = await launchUrl(
-      url,
-      mode: LaunchMode.externalApplication,
-    );
+    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
 
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -333,11 +325,28 @@ void _showPhotoOptions() {
 
       String finalPhotoUrl = _photoUrl;
 
-      // Si se escogió una foto nueva, se sube al storage
       if (_selectedImage != null) {
-        finalPhotoUrl = await _storageService.uploadVaccinationPhoto(
-          _selectedImage!,
-        );
+        try {
+          finalPhotoUrl = await _storageService.uploadVaccinationPhoto(
+            _selectedImage!,
+          );
+        } catch (e) {
+          debugPrint('Error Storage: $e');
+
+          // Continuar sin fotografía
+          finalPhotoUrl = '';
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: Colors.orange,
+                content: Text(
+                  'No se pudo subir la fotografía.\nSe guardará el registro sin imagen.',
+                ),
+              ),
+            );
+          }
+        }
       }
 
       final vaccination = VaccinationModel(
@@ -418,10 +427,7 @@ void _showPhotoOptions() {
             prefixIcon: Icon(Icons.map_outlined, color: VetTheme.primary),
           ),
           items: sectors.map((sector) {
-            return DropdownMenuItem(
-              value: sector.id,
-              child: Text(sector.name),
-            );
+            return DropdownMenuItem(value: sector.id, child: Text(sector.name));
           }).toList(),
           onChanged: (value) {
             if (value == null) return;
@@ -487,10 +493,7 @@ void _showPhotoOptions() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: content,
-        ),
+        ClipRRect(borderRadius: BorderRadius.circular(18), child: content),
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
@@ -652,15 +655,52 @@ void _showPhotoOptions() {
     );
   }
 
+  // Validación sencilla: nombres solo letras y espacios
+  String? _validateOnlyLetters(String? value, String message) {
+    final text = value?.trim() ?? '';
+
+    if (text.isEmpty) {
+      return 'Campo obligatorio';
+    }
+
+    if (text.length < 2) {
+      return '$message debe tener al menos 2 letras';
+    }
+
+    return null;
+  }
+
+  // Campo reutilizable para no repetir mucho código
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required IconData prefixIcon,
+    required String? Function(String?) validator,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    int maxLines = 1,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      maxLines: maxLines,
+      textCapitalization: TextCapitalization.words,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: Icon(prefixIcon, color: VetTheme.primary),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final firestoreService = Provider.of<FirestoreService>(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          isEditing ? 'Editar Vacunación' : 'Registrar Vacunación',
-        ),
+        title: Text(isEditing ? 'Editar Vacunación' : 'Registrar Vacunación'),
       ),
       body: Container(
         decoration: VetTheme.backgroundGradient,
@@ -683,43 +723,71 @@ void _showPhotoOptions() {
                         children: [
                           const _SectionTitle(title: 'Datos del propietario'),
                           const SizedBox(height: 16),
-                          CustomTextField(
+                          _buildTextField(
                             controller: _ownerNameController,
                             labelText: 'Nombre del propietario',
                             prefixIcon: Icons.person_outline,
+                            keyboardType: TextInputType.name,
+                            inputFormatters: [
+                              // Solo letras y espacios
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                              ),
+                            ],
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Campo obligatorio';
-                              }
-                              return null;
+                              return _validateOnlyLetters(
+                                value,
+                                'El nombre del propietario',
+                              );
                             },
                           ),
                           const SizedBox(height: 16),
-                          CustomTextField(
+                          _buildTextField(
                             controller: _ownerCedulaController,
                             labelText: 'Cédula del propietario',
                             prefixIcon: Icons.badge_outlined,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              // Solo números y máximo 10 dígitos
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'Campo obligatorio';
                               }
-                              if (value.trim().length != 10) {
+
+                              if (text.length != 10) {
                                 return 'La cédula debe tener 10 dígitos';
                               }
+
                               return null;
                             },
                           ),
                           const SizedBox(height: 16),
-                          CustomTextField(
+                          _buildTextField(
                             controller: _ownerPhoneController,
                             labelText: 'Teléfono',
                             prefixIcon: Icons.phone_outlined,
                             keyboardType: TextInputType.phone,
+                            inputFormatters: [
+                              // Solo números y máximo 10 dígitos
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'Campo obligatorio';
                               }
+
+                              if (text.length != 10) {
+                                return 'El teléfono debe tener 10 dígitos';
+                              }
+
                               return null;
                             },
                           ),
@@ -753,26 +821,47 @@ void _showPhotoOptions() {
                             },
                           ),
                           const SizedBox(height: 16),
-                          CustomTextField(
+                          _buildTextField(
                             controller: _petNameController,
                             labelText: 'Nombre de la mascota',
                             prefixIcon: Icons.cruelty_free_outlined,
+                            keyboardType: TextInputType.name,
+                            inputFormatters: [
+                              // Solo letras y espacios
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                              ),
+                            ],
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Campo obligatorio';
-                              }
-                              return null;
+                              return _validateOnlyLetters(
+                                value,
+                                'El nombre de la mascota',
+                              );
                             },
                           ),
                           const SizedBox(height: 16),
-                          CustomTextField(
+                          _buildTextField(
                             controller: _petAgeController,
                             labelText: 'Edad aproximada',
                             prefixIcon: Icons.cake_outlined,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              // Solo números y máximo 2 dígitos
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(2),
+                            ],
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'Campo obligatorio';
                               }
+
+                              final age = int.tryParse(text);
+                              if (age == null || age <= 0) {
+                                return 'Edad no válida';
+                              }
+
                               return null;
                             },
                           ),
@@ -808,14 +897,25 @@ void _showPhotoOptions() {
                           const SizedBox(height: 16),
                           _buildSectorDropdown(firestoreService),
                           const SizedBox(height: 16),
-                          CustomTextField(
+                          _buildTextField(
                             controller: _vaccineNameController,
                             labelText: 'Vacuna aplicada',
                             prefixIcon: Icons.vaccines_outlined,
+                            keyboardType: TextInputType.text,
+                            inputFormatters: [
+                              // Vacuna puede tener letras, números, espacios, punto, coma y guion
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.,-]'),
+                              ),
+                              LengthLimitingTextInputFormatter(60),
+                            ],
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
+                              final text = value?.trim() ?? '';
+
+                              if (text.isEmpty) {
                                 return 'Campo obligatorio';
                               }
+
                               return null;
                             },
                           ),
@@ -823,6 +923,9 @@ void _showPhotoOptions() {
                           TextFormField(
                             controller: _observationsController,
                             maxLines: 3,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(250),
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'Observaciones',
                               prefixIcon: Icon(
@@ -864,16 +967,19 @@ void _showPhotoOptions() {
 class _SectionTitle extends StatelessWidget {
   final String title;
 
-  const _SectionTitle({required this.title});
+  const _SectionTitle({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: VetTheme.textDark,
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: VetTheme.textDark,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -886,6 +992,7 @@ class _PhotoOptionTile extends StatelessWidget {
   final VoidCallback onTap;
 
   const _PhotoOptionTile({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,

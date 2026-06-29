@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/vaccination_model.dart';
+import '../../services/auth_service.dart';
 import '../../services/vaccination_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
@@ -16,19 +18,41 @@ class VaccinationsPage extends StatefulWidget {
 class _VaccinationsPageState extends State<VaccinationsPage> {
   final VaccinationService _vaccinationService = VaccinationService();
 
-  // Abre el formulario para crear o editar vacunación
+  // Según el rol, cargamos las vacunaciones que puede ver
+  Stream<List<VaccinationModel>> _getVaccinationsByRole() {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final user = authService.currentUser;
+
+    if (user == null) return Stream.value([]);
+
+    // Campaña ve todo
+    if (user.role == 'coordinador_campana') {
+      return _vaccinationService.getVaccinationsStream();
+    }
+
+    // Vacunador solo ve sus propios registros
+    if (user.role == 'vacunador') {
+      return _vaccinationService.getVaccinationsByVaccinator(user.uid);
+    }
+
+    // Brigada por ahora ve registros para corregir
+    // Si luego agregamos sectores al UserModel, aquí filtramos por sector.
+    if (user.role == 'coordinador_brigada') {
+      return _vaccinationService.getVaccinationsStream();
+    }
+
+    return Stream.value([]);
+  }
+
   void _openForm({VaccinationModel? vaccination}) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => VaccinationFormPage(
-          vaccinationToEdit: vaccination,
-        ),
+        builder: (_) => VaccinationFormPage(vaccinationToEdit: vaccination),
       ),
     );
   }
 
-  // Confirma eliminación del registro
   Future<void> _confirmDelete(VaccinationModel vaccination) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -69,8 +93,18 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
     );
   }
 
-  // Tarjeta de cada vacunación
   Widget _buildVaccinationCard(VaccinationModel vaccination) {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final user = authService.currentUser;
+
+    // Permisos sencillos por rol
+    final canEdit = user?.role == 'coordinador_campana' ||
+        user?.role == 'coordinador_brigada' ||
+        vaccination.vaccinatorId == user?.uid;
+
+    final canDelete = user?.role == 'coordinador_campana' ||
+        user?.role == 'coordinador_brigada';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: GlassCard(
@@ -87,6 +121,7 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
                   fit: BoxFit.cover,
                 ),
               ),
+
             const SizedBox(height: 14),
 
             Row(
@@ -119,6 +154,7 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
             ),
 
             const SizedBox(height: 10),
+
             Text(
               'Propietario: ${vaccination.ownerName}',
               style: const TextStyle(color: VetTheme.textDark),
@@ -131,7 +167,9 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
               'Teléfono: ${vaccination.ownerPhone}',
               style: const TextStyle(color: VetTheme.textLight),
             ),
+
             const SizedBox(height: 8),
+
             Text(
               'Vacuna: ${vaccination.vaccineName}',
               style: const TextStyle(
@@ -149,56 +187,68 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
             ),
             Text(
               'GPS: ${vaccination.latitude}, ${vaccination.longitude}',
-              style: const TextStyle(color: VetTheme.textLight, fontSize: 12),
+              style: const TextStyle(
+                color: VetTheme.textLight,
+                fontSize: 12,
+              ),
             ),
 
-            const SizedBox(height: 14),
-
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openForm(vaccination: vaccination),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Editar'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _confirmDelete(vaccination),
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Eliminar'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: VetTheme.accent,
-                      side: const BorderSide(color: VetTheme.accent),
+            if (canEdit || canDelete) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  if (canEdit)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openForm(vaccination: vaccination),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Editar'),
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
+
+                  if (canEdit && canDelete) const SizedBox(width: 12),
+
+                  if (canDelete)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _confirmDelete(vaccination),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Eliminar'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: VetTheme.accent,
+                          side: const BorderSide(color: VetTheme.accent),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  // Construye la interfaz
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+    final user = authService.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vacunaciones'),
       ),
+
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(),
         icon: const Icon(Icons.add),
         label: const Text('Nueva'),
       ),
+
       body: Container(
         decoration: VetTheme.backgroundGradient,
         child: StreamBuilder<List<VaccinationModel>>(
-          stream: _vaccinationService.getVaccinationsStream(),
+          stream: _getVaccinationsByRole(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -229,10 +279,12 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Registra la primera vacunación con foto y GPS.',
+                      Text(
+                        user?.role == 'vacunador'
+                            ? 'Registra tu primera vacunación con foto y GPS.'
+                            : 'Todavía no existen registros para mostrar.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: VetTheme.textLight),
+                        style: const TextStyle(color: VetTheme.textLight),
                       ),
                       const SizedBox(height: 18),
                       ElevatedButton.icon(
