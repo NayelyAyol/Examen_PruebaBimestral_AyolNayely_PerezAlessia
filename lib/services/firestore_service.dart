@@ -120,10 +120,10 @@ class FirestoreService extends ChangeNotifier {
           .where('rol', isEqualTo: 'coordinador_brigada')
           .snapshots()
           .map((snapshot) {
-        return snapshot.docs.map((doc) {
-          return CoordinatorModel.fromMap(doc.data(), doc.id);
-        }).toList();
-      });
+            return snapshot.docs.map((doc) {
+              return CoordinatorModel.fromMap(doc.data(), doc.id);
+            }).toList();
+          });
     } else {
       return Stream.value(_demoCoordinators);
     }
@@ -218,8 +218,9 @@ class FirestoreService extends ChangeNotifier {
       for (final sectorId in assignedSectorIds) {
         await _db.collection('sectores').doc(sectorId).update({
           'assignedCoordinatorId': coordinatorId,
-          'assignedCoordinatorName':
-              coordinatorName.isEmpty ? null : coordinatorName,
+          'assignedCoordinatorName': coordinatorName.isEmpty
+              ? null
+              : coordinatorName,
         });
       }
     } else {
@@ -239,8 +240,9 @@ class FirestoreService extends ChangeNotifier {
         if (index != -1) {
           _demoSectors[index] = _demoSectors[index].copyWith(
             assignedCoordinatorId: coordinatorId,
-            assignedCoordinatorName:
-                coordinatorName.isEmpty ? null : coordinatorName,
+            assignedCoordinatorName: coordinatorName.isEmpty
+                ? null
+                : coordinatorName,
           );
         }
       }
@@ -267,6 +269,51 @@ class FirestoreService extends ChangeNotifier {
       return snap.docs.isEmpty;
     } else {
       return _demoSectors.isEmpty;
+    }
+  }
+
+  Future<void> assignVaccinatorToSectors({
+    required String vaccinatorId,
+    required List<String> sectorIds,
+  }) async {
+    if (_isFirebaseInitialized) {
+      final sectorsSnapshot = await _db.collection('sectores').get();
+
+      for (final doc in sectorsSnapshot.docs) {
+        final data = doc.data();
+        final currentIds = List<String>.from(
+          data['assignedVaccinatorIds'] ?? [],
+        );
+
+        if (sectorIds.contains(doc.id)) {
+          if (!currentIds.contains(vaccinatorId)) {
+            currentIds.add(vaccinatorId);
+          }
+        } else {
+          currentIds.remove(vaccinatorId);
+        }
+
+        await _db.collection('sectores').doc(doc.id).update({
+          'assignedVaccinatorIds': currentIds,
+        });
+      }
+    } else {
+      for (var i = 0; i < _demoSectors.length; i++) {
+        final sector = _demoSectors[i];
+        final currentIds = List<String>.from(sector.assignedVaccinatorIds);
+
+        if (sectorIds.contains(sector.id)) {
+          if (!currentIds.contains(vaccinatorId)) {
+            currentIds.add(vaccinatorId);
+          }
+        } else {
+          currentIds.remove(vaccinatorId);
+        }
+
+        _demoSectors[i] = sector.copyWith(assignedVaccinatorIds: currentIds);
+      }
+
+      notifyListeners();
     }
   }
 }

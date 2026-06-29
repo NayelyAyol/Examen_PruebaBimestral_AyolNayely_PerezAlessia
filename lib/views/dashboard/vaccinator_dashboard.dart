@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/sector_model.dart';
+import '../../models/vaccination_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/vaccination_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../vaccinations/vaccinations_page.dart';
@@ -14,8 +16,11 @@ class VaccinatorDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
-    final firestoreService =
-        Provider.of<FirestoreService>(context, listen: false);
+    final firestoreService = Provider.of<FirestoreService>(
+      context,
+      listen: false,
+    );
+    final vaccinationService = VaccinationService();
     final user = authService.currentUser;
 
     return Scaffold(
@@ -37,231 +42,395 @@ class VaccinatorDashboard extends StatelessWidget {
         decoration: VetTheme.backgroundGradient,
         child: StreamBuilder<List<SectorModel>>(
           stream: firestoreService.getSectorsStream(),
-          builder: (context, snapshot) {
-            final sectors = snapshot.data ?? [];
+          builder: (context, sectorSnapshot) {
+            return StreamBuilder<List<VaccinationModel>>(
+              stream: user == null
+                  ? Stream.value([])
+                  : vaccinationService.getVaccinationsByVaccinator(user.uid),
+              builder: (context, vaccinationSnapshot) {
+                final sectors = sectorSnapshot.data ?? [];
+                final vaccinations = vaccinationSnapshot.data ?? [];
 
-            final mySectors = sectors;
+                final mySectors = sectors.where((sector) {
+                  return sector.assignedVaccinatorIds.contains(user?.uid);
+                }).toList();
 
-            return ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                GlassCard(
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: VetTheme.primary.withOpacity(0.2),
-                        child: const Icon(
-                          Icons.pets,
-                          color: VetTheme.primary,
-                          size: 30,
+                final mySectorIds = mySectors.map((s) => s.id).toList();
+
+                final myVaccinations = vaccinations.where((v) {
+                  return mySectorIds.contains(v.sectorId);
+                }).toList();
+
+                final totalDogs = myVaccinations
+                    .where((v) => v.tipoMascota.toLowerCase() == 'perro')
+                    .length;
+
+                final totalCats = myVaccinations
+                    .where((v) => v.tipoMascota.toLowerCase() == 'gato')
+                    .length;
+
+                final isLoading =
+                    sectorSnapshot.connectionState == ConnectionState.waiting ||
+                    vaccinationSnapshot.connectionState ==
+                        ConnectionState.waiting;
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 600;
+                    final isTablet =
+                        constraints.maxWidth >= 600 &&
+                        constraints.maxWidth < 950;
+
+                    return ListView(
+                      padding: EdgeInsets.all(isMobile ? 16 : 24),
+                      children: [
+                        GlassCard(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(isMobile ? 16 : 20),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: isMobile ? 24 : 28,
+                                backgroundColor: VetTheme.primary.withOpacity(
+                                  0.16,
+                                ),
+                                child: const Icon(
+                                  Icons.pets,
+                                  color: VetTheme.primary,
+                                  size: 30,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Hola, ${user?.name.split(" ").first ?? "Vacunador"}',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: VetTheme.textDark,
+                                        fontSize: isMobile ? 20 : 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Resumen de tus sectores y vacunaciones.',
+                                      style: TextStyle(
+                                        color: VetTheme.textLight,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Bienvenido, ${user?.name ?? "Vacunador"}',
-                              style: const TextStyle(
-                                color: VetTheme.textDark,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+
+                        const SizedBox(height: 18),
+
+                        if (isLoading)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: CircularProgressIndicator(
+                                color: VetTheme.primary,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Vacunador',
-                              style: TextStyle(
-                                color: VetTheme.textLight,
-                                fontSize: 13,
+                          )
+                        else
+                          _MetricsGrid(
+                            isMobile: isMobile,
+                            isTablet: isTablet,
+                            children: [
+                              _MetricCard(
+                                title: 'Sectores',
+                                value: mySectors.length.toString(),
+                                icon: Icons.map_outlined,
+                                color: VetTheme.primary,
+                              ),
+                              _MetricCard(
+                                title: 'Vacunaciones',
+                                value: myVaccinations.length.toString(),
+                                icon: Icons.assignment_turned_in_outlined,
+                                color: Colors.green,
+                              ),
+                              _MetricCard(
+                                title: 'Perros',
+                                value: totalDogs.toString(),
+                                icon: Icons.pets,
+                                color: Colors.blueAccent,
+                              ),
+                              _MetricCard(
+                                title: 'Gatos',
+                                value: totalCats.toString(),
+                                icon: Icons.cruelty_free_outlined,
+                                color: VetTheme.accent,
+                              ),
+                            ],
+                          ),
+
+                        const SizedBox(height: 26),
+
+                        const Text(
+                          'Mis sectores',
+                          style: TextStyle(
+                            color: VetTheme.textDark,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        if (mySectors.isEmpty)
+                          GlassCard(
+                            width: double.infinity,
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.assignment_late_outlined,
+                                    size: 48,
+                                    color: VetTheme.textLight.withOpacity(0.5),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'No tienes sectores asignados en este momento.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: VetTheme.textLight,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                          )
+                        else
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: mySectors.length,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: isMobile ? 2 : 3,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  childAspectRatio: isMobile ? 0.86 : 1.05,
+                                ),
+                            itemBuilder: (context, index) {
+                              final sector = mySectors[index];
 
-                const SizedBox(height: 20),
+                              final count = myVaccinations.where((v) {
+                                return v.sectorId == sector.id;
+                              }).length;
 
-                GlassCard(
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
-                      Icons.add_task_outlined,
-                      color: VetTheme.primary,
-                      size: 32,
-                    ),
-                    title: const Text(
-                      'Registrar Vacunaciones',
-                      style: TextStyle(
-                        color: VetTheme.textDark,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      'Registrar nuevas vacunaciones con fotografía y GPS',
-                      style: TextStyle(color: VetTheme.textLight),
-                    ),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      color: VetTheme.textLight,
-                      size: 16,
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const VaccinationsPage(
-                            title: 'Mis Vacunaciones',
-                            canCreate: true,
-                            canEdit: true,
-                            onlyMine: true,
+                              return _SectorMiniCard(
+                                sector: sector,
+                                count: count,
+                              );
+                            },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
 
-                const SizedBox(height: 28),
+                        const SizedBox(height: 24),
 
-                const Text(
-                  'Mis Sectores Asignados',
-                  style: TextStyle(
-                    color: VetTheme.textDark,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                if (snapshot.connectionState == ConnectionState.waiting)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: CircularProgressIndicator(
-                        color: VetTheme.primary,
-                      ),
-                    ),
-                  )
-                else if (mySectors.isEmpty)
-                  GlassCard(
-                    width: double.infinity,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.assignment_late_outlined,
-                            size: 48,
-                            color: VetTheme.textLight.withOpacity(0.5),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'No tienes sectores asignados en este momento.',
-                            textAlign: TextAlign.center,
+                        GlassCard(
+                          width: double.infinity,
+                          child: Text(
+                            'Como Vacunador, puedes ingresar únicamente a tus sectores asignados, registrar vacunaciones con fotografía y GPS, y editar solo tus propios registros.',
                             style: TextStyle(
-                              color: VetTheme.textLight,
-                              fontSize: 15,
+                              color: VetTheme.textLight.withOpacity(0.9),
+                              fontSize: 13,
+                              height: 1.4,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: mySectors.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
-                    itemBuilder: (context, index) {
-                      final sector = mySectors[index];
-                      return _buildSectorCard(sector);
-                    },
-                  ),
-
-                const SizedBox(height: 24),
-
-                GlassCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: VetTheme.primary,
-                            size: 20,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Información del Rol',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: VetTheme.textDark,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Como Vacunador, puedes ver tus sectores asignados, registrar vacunaciones, capturar fotografía, capturar GPS y editar únicamente tus propios registros.',
-                        style: TextStyle(
-                          color: VetTheme.textLight.withOpacity(0.9),
-                          fontSize: 13,
-                          height: 1.4,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                      ],
+                    );
+                  },
+                );
+              },
             );
           },
         ),
       ),
     );
   }
+}
 
-  Widget _buildSectorCard(SectorModel sector) {
+class _SectorMiniCard extends StatelessWidget {
+  final SectorModel sector;
+  final int count;
+
+  const _SectorMiniCard({required this.sector, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VaccinationsPage(
+              title: sector.name,
+              canCreate: true,
+              canEdit: true,
+              onlyMine: true,
+              sectorId: sector.id,
+              sectorNombre: sector.name,
+            ),
+          ),
+        );
+      },
+      child: GlassCard(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              height: 42,
+              width: 42,
+              decoration: BoxDecoration(
+                color: VetTheme.primary.withOpacity(0.10),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.location_city_outlined,
+                color: VetTheme.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              sector.name,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: VetTheme.textDark,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              sector.zone,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: VetTheme.textLight, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$count vacunas',
+              style: const TextStyle(
+                color: VetTheme.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricsGrid extends StatelessWidget {
+  final bool isMobile;
+  final bool isTablet;
+  final List<Widget> children;
+
+  const _MetricsGrid({
+    required this.isMobile,
+    required this.isTablet,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: isMobile ? 2 : 4,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: isMobile
+          ? 0.92
+          : isTablet
+          ? 1.08
+          : 1.18,
+      children: children,
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _MetricCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            sector.name,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: VetTheme.textDark,
-              fontSize: 18,
-            ),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox(
+          width: 110,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: VetTheme.textLight,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Zona: ${sector.zone}',
-            style: const TextStyle(
-              color: VetTheme.primary,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            sector.description,
-            style: const TextStyle(
-              color: VetTheme.textLight,
-              fontSize: 14,
-              height: 1.4,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

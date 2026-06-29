@@ -1,10 +1,11 @@
+import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -17,10 +18,14 @@ import '../../widgets/glass_card.dart';
 
 class VaccinationFormPage extends StatefulWidget {
   final VaccinationModel? vaccinationToEdit;
+  final String? sectorId;
+  final String? sectorNombre;
 
   const VaccinationFormPage({
     super.key,
     this.vaccinationToEdit,
+    this.sectorId,
+    this.sectorNombre,
   });
 
   @override
@@ -45,7 +50,6 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
 
   String? _photoUrl;
   Uint8List? _selectedImageBytes;
-  String? _selectedImageName;
 
   double _latitude = 0.0;
   double _longitude = 0.0;
@@ -54,6 +58,14 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
   bool _isGettingLocation = false;
 
   bool get isEditing => widget.vaccinationToEdit != null;
+
+  String get _currentSectorId {
+    return widget.vaccinationToEdit?.sectorId ?? widget.sectorId ?? '';
+  }
+
+  String get _currentSectorNombre {
+    return widget.vaccinationToEdit?.sectorNombre ?? widget.sectorNombre ?? '';
+  }
 
   @override
   void initState() {
@@ -217,46 +229,48 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
 
       setState(() {
         _selectedImageBytes = bytes;
-        _selectedImageName = image.name;
       });
     } catch (e) {
       _showSnack('Error al seleccionar imagen: $e');
     }
   }
 
-  Future<String> _uploadPhotoToStorage() async {
+  Future<String> _savePhotoLocally() async {
     if (_selectedImageBytes == null) {
       return _photoUrl ?? '';
     }
 
-    final cedula = _ownerIdCtrl.text.trim();
+    final cedula = _ownerIdCtrl.text.trim().isEmpty
+        ? 'sin_cedula'
+        : _ownerIdCtrl.text.trim();
+
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final fileName = _selectedImageName ?? 'foto_$timestamp.jpg';
+    final safeFileName = 'foto_$timestamp.jpg';
 
-    final ref = FirebaseStorage.instance
-        .ref()
-        .child('vacunaciones')
-        .child(cedula)
-        .child('${timestamp}_$fileName');
+    final appDirectory = await getApplicationDocumentsDirectory();
 
-    final metadata = SettableMetadata(
-      contentType: 'image/jpeg',
-      customMetadata: {
-        'cedulaPropietario': cedula,
-        'tipo': 'evidencia_vacunacion',
-      },
+    final vaccinationDirectory = Directory(
+      '${appDirectory.path}/vacunaciones/${_currentSectorId.isEmpty ? "sin_sector" : _currentSectorId}/$cedula',
     );
 
-    final uploadTask = await ref.putData(
-      _selectedImageBytes!,
-      metadata,
-    );
+    if (!await vaccinationDirectory.exists()) {
+      await vaccinationDirectory.create(recursive: true);
+    }
 
-    return uploadTask.ref.getDownloadURL();
+    final file = File('${vaccinationDirectory.path}/$safeFileName');
+
+    await file.writeAsBytes(_selectedImageBytes!);
+
+    return file.path;
   }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_currentSectorId.isEmpty || _currentSectorNombre.isEmpty) {
+      _showSnack('No se pudo identificar el sector de vacunación.');
+      return;
+    }
 
     final hasExistingPhoto = _photoUrl != null && _photoUrl!.isNotEmpty;
     final hasNewPhoto = _selectedImageBytes != null;
@@ -277,7 +291,7 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
     setState(() => _isLoading = true);
 
     try {
-      final uploadedPhotoUrl = await _uploadPhotoToStorage();
+      final photoPath = await _savePhotoLocally();
 
       final vaccination = VaccinationModel(
         id: widget.vaccinationToEdit?.id ?? '',
@@ -290,13 +304,15 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
         sexo: _petGender,
         vacunaAplicada: _vaccineCtrl.text.trim(),
         observaciones: _obsCtrl.text.trim(),
-        fotografia: uploadedPhotoUrl,
+        fotografia: photoPath,
         latitud: _latitude,
         longitud: _longitude,
         fechaHora: widget.vaccinationToEdit?.fechaHora ?? DateTime.now(),
         vacunadorId: widget.vaccinationToEdit?.vacunadorId ?? user?.uid ?? '',
         vacunadorNombre:
             widget.vaccinationToEdit?.vacunadorNombre ?? user?.name ?? '',
+        sectorId: _currentSectorId,
+        sectorNombre: _currentSectorNombre,
       );
 
       if (isEditing) {
@@ -334,11 +350,13 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
     required String? Function(String?) validator,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
+    int maxLines = 1,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      maxLines: maxLines,
       validator: validator,
       decoration: InputDecoration(
         labelText: labelText,
@@ -358,19 +376,30 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
     }
 
     if (_photoUrl != null && _photoUrl!.isNotEmpty) {
-      return Image.network(
-        _photoUrl!,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (_, __, ___) {
-          return const Center(
-            child: Text(
-              'No se pudo cargar la imagen',
-              style: TextStyle(color: VetTheme.textLight),
-            ),
-          );
-        },
+      final file = File(_photoUrl!);
+
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (_, __, ___) {
+            return const Center(
+              child: Text(
+                'No se pudo cargar la imagen',
+                style: TextStyle(color: VetTheme.textLight),
+              ),
+            );
+          },
+        );
+      }
+
+      return const Center(
+        child: Text(
+          'Imagen no encontrada en este dispositivo',
+          style: TextStyle(color: VetTheme.textLight),
+        ),
       );
     }
 
@@ -388,6 +417,40 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
           style: TextStyle(color: VetTheme.textLight),
         ),
       ],
+    );
+  }
+
+  Widget _buildSectorInfo() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: VetTheme.primary.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: VetTheme.primary.withOpacity(0.25),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.location_city_outlined,
+            color: VetTheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _currentSectorNombre.isEmpty
+                  ? 'Sector no identificado'
+                  : 'Sector: $_currentSectorNombre',
+              style: const TextStyle(
+                color: VetTheme.textDark,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -411,6 +474,8 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildSectorInfo(),
+                  const SizedBox(height: 24),
                   const Text(
                     'Datos del propietario',
                     style: TextStyle(
@@ -429,8 +494,16 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                         RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
                       ),
                     ],
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'El nombre es obligatorio' : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'El nombre es obligatorio';
+                      }
+                      if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$')
+                          .hasMatch(v.trim())) {
+                        return 'Solo se permiten letras';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
@@ -442,8 +515,15 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(10),
                     ],
-                    validator: (v) =>
-                        v == null || v.trim().length != 10 ? 'Cédula inválida' : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'La cédula es obligatoria';
+                      }
+                      if (v.trim().length != 10) {
+                        return 'La cédula debe tener 10 dígitos';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
@@ -455,8 +535,15 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(10),
                     ],
-                    validator: (v) =>
-                        v == null || v.trim().length != 10 ? 'Teléfono inválido' : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'El teléfono es obligatorio';
+                      }
+                      if (v.trim().length != 10) {
+                        return 'El teléfono debe tener 10 dígitos';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 26),
                   const Text(
@@ -487,9 +574,21 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                     controller: _petNameCtrl,
                     labelText: 'Nombre de la mascota',
                     prefixIcon: Icons.cruelty_free_outlined,
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'El nombre de la mascota es obligatorio'
-                        : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                      ),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'El nombre de la mascota es obligatorio';
+                      }
+                      if (!RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$')
+                          .hasMatch(v.trim())) {
+                        return 'Solo se permiten letras';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
@@ -501,15 +600,24 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(2),
                     ],
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'La edad es obligatoria' : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'La edad es obligatoria';
+                      }
+                      final age = int.tryParse(v.trim());
+                      if (age == null || age <= 0) {
+                        return 'Edad inválida';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: _petGender,
                     decoration: const InputDecoration(
                       labelText: 'Sexo',
-                      prefixIcon: Icon(Icons.transgender, color: VetTheme.primary),
+                      prefixIcon:
+                          Icon(Icons.transgender, color: VetTheme.primary),
                     ),
                     items: const [
                       DropdownMenuItem(value: 'Macho', child: Text('Macho')),
@@ -533,16 +641,31 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                     controller: _vaccineCtrl,
                     labelText: 'Vacuna aplicada',
                     prefixIcon: Icons.vaccines_outlined,
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'La vacuna es obligatoria' : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-]'),
+                      ),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'La vacuna es obligatoria';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _obsCtrl,
                     maxLines: 2,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.,\-]'),
+                      ),
+                    ],
                     decoration: const InputDecoration(
                       labelText: 'Observaciones',
-                      prefixIcon: Icon(Icons.notes_outlined, color: VetTheme.primary),
+                      prefixIcon:
+                          Icon(Icons.notes_outlined, color: VetTheme.primary),
                     ),
                   ),
                   const SizedBox(height: 26),
@@ -610,7 +733,8 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _isGettingLocation ? null : _getCurrentLocation,
+                      onPressed:
+                          _isGettingLocation ? null : _getCurrentLocation,
                       icon: _isGettingLocation
                           ? const SizedBox(
                               width: 18,
@@ -636,7 +760,8 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                   ),
                   const SizedBox(height: 24),
                   CustomButton(
-                    text: isEditing ? 'Guardar Cambios' : 'Registrar Vacunación',
+                    text:
+                        isEditing ? 'Guardar Cambios' : 'Registrar Vacunación',
                     isLoading: _isLoading,
                     onPressed: _submitForm,
                   ),

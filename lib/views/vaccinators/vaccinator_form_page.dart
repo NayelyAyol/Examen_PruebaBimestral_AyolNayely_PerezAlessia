@@ -15,10 +15,7 @@ import '../../widgets/glass_card.dart';
 class VaccinatorFormPage extends StatefulWidget {
   final VaccinatorModel? vaccinatorToEdit;
 
-  const VaccinatorFormPage({
-    super.key,
-    this.vaccinatorToEdit,
-  });
+  const VaccinatorFormPage({super.key, this.vaccinatorToEdit});
 
   @override
   State<VaccinatorFormPage> createState() => _VaccinatorFormPageState();
@@ -102,6 +99,11 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
+      final firestoreService = Provider.of<FirestoreService>(
+        context,
+        listen: false,
+      );
+
       String uid;
 
       if (!isEditing) {
@@ -132,6 +134,11 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
       } else {
         await _vaccinatorService.saveVaccinatorProfile(uid, vaccinator);
       }
+
+      await firestoreService.assignVaccinatorToSectors(
+        vaccinatorId: uid,
+        sectorIds: _assignedSectorIds,
+      );
 
       if (!mounted) return;
 
@@ -192,10 +199,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
           );
         }
 
-        final sectors = _filterSectorsByRole(
-          snapshot.data ?? [],
-          currentUser,
-        );
+        final sectors = _filterSectorsByRole(snapshot.data ?? [], currentUser);
 
         if (sectors.isEmpty) {
           return const Padding(
@@ -212,9 +216,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.45),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: VetTheme.primary.withOpacity(0.15),
-            ),
+            border: Border.all(color: VetTheme.primary.withOpacity(0.15)),
           ),
           child: ListView.builder(
             shrinkWrap: true,
@@ -437,10 +439,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
                           ),
                           const SizedBox(height: 8),
 
-                          _buildSectorsList(
-                            firestoreService,
-                            currentUser,
-                          ),
+                          _buildSectorsList(firestoreService, currentUser),
 
                           const SizedBox(height: 28),
 

@@ -5,6 +5,7 @@ class SectorModel {
   final String description;
   final String? assignedCoordinatorId;
   final String? assignedCoordinatorName;
+  final List<String> assignedVaccinatorIds;
 
   SectorModel({
     required this.id,
@@ -13,6 +14,7 @@ class SectorModel {
     required this.description,
     this.assignedCoordinatorId,
     this.assignedCoordinatorName,
+    this.assignedVaccinatorIds = const [],
   });
 
   factory SectorModel.fromMap(Map<String, dynamic> map, String id) {
@@ -23,6 +25,8 @@ class SectorModel {
       description: map['description'] ?? '',
       assignedCoordinatorId: map['assignedCoordinatorId'],
       assignedCoordinatorName: map['assignedCoordinatorName'],
+      assignedVaccinatorIds:
+          List<String>.from(map['assignedVaccinatorIds'] ?? []),
     );
   }
 
@@ -33,6 +37,7 @@ class SectorModel {
       'description': description,
       'assignedCoordinatorId': assignedCoordinatorId,
       'assignedCoordinatorName': assignedCoordinatorName,
+      'assignedVaccinatorIds': assignedVaccinatorIds,
     };
   }
 
@@ -43,6 +48,7 @@ class SectorModel {
     String? description,
     String? assignedCoordinatorId,
     String? assignedCoordinatorName,
+    List<String>? assignedVaccinatorIds,
   }) {
     return SectorModel(
       id: id ?? this.id,
@@ -53,6 +59,8 @@ class SectorModel {
           assignedCoordinatorId ?? this.assignedCoordinatorId,
       assignedCoordinatorName:
           assignedCoordinatorName ?? this.assignedCoordinatorName,
+      assignedVaccinatorIds:
+          assignedVaccinatorIds ?? this.assignedVaccinatorIds,
     );
   }
 }

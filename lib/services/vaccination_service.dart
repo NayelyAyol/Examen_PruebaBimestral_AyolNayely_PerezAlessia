@@ -20,28 +20,44 @@ class VaccinationService extends ChangeNotifier {
   }
 
   Stream<List<VaccinationModel>> getVaccinations() {
-    return _db.orderBy('fechaHora', descending: true).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return VaccinationModel.fromFirestore(
-          doc.id,
-          doc.data() as Map<String, dynamic>,
-        );
-      }).toList();
-    });
+    return _db.snapshots().map(_mapAndSortSnapshot);
   }
 
   Stream<List<VaccinationModel>> getVaccinationsByVaccinator(String uid) {
     return _db
         .where('vacunadorId', isEqualTo: uid)
-        .orderBy('fechaHora', descending: true)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return VaccinationModel.fromFirestore(
-          doc.id,
-          doc.data() as Map<String, dynamic>,
-        );
-      }).toList();
-    });
+        .map(_mapAndSortSnapshot);
+  }
+
+  Stream<List<VaccinationModel>> getVaccinationsBySector(String sectorId) {
+    return _db
+        .where('sectorId', isEqualTo: sectorId)
+        .snapshots()
+        .map(_mapAndSortSnapshot);
+  }
+
+  Stream<List<VaccinationModel>> getVaccinationsBySectorAndVaccinator(
+    String sectorId,
+    String vacunadorId,
+  ) {
+    return _db
+        .where('sectorId', isEqualTo: sectorId)
+        .where('vacunadorId', isEqualTo: vacunadorId)
+        .snapshots()
+        .map(_mapAndSortSnapshot);
+  }
+
+  List<VaccinationModel> _mapAndSortSnapshot(QuerySnapshot snapshot) {
+    final list = snapshot.docs.map((doc) {
+      return VaccinationModel.fromFirestore(
+        doc.id,
+        doc.data() as Map<String, dynamic>,
+      );
+    }).toList();
+
+    list.sort((a, b) => b.fechaHora.compareTo(a.fechaHora));
+
+    return list;
   }
 }

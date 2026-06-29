@@ -18,6 +18,8 @@ class VaccinationModel {
 
   final String vacunadorId;
   final String vacunadorNombre;
+  final String sectorId;
+  final String sectorNombre;
 
   VaccinationModel({
     required this.id,
@@ -36,6 +38,8 @@ class VaccinationModel {
     required this.fechaHora,
     this.vacunadorId = '',
     this.vacunadorNombre = '',
+    this.sectorId = '',
+    this.sectorNombre = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -53,8 +57,12 @@ class VaccinationModel {
       'latitud': latitud,
       'longitud': longitud,
       'fechaHora': Timestamp.fromDate(fechaHora),
+
       'vacunadorId': vacunadorId,
       'vacunadorNombre': vacunadorNombre,
+
+      'sectorId': sectorId,
+      'sectorNombre': sectorNombre,
     };
   }
 
@@ -71,11 +79,15 @@ class VaccinationModel {
       vacunaAplicada: map['vacunaAplicada'] ?? '',
       observaciones: map['observaciones'] ?? '',
       fotografia: map['fotografia'] ?? '',
-      latitud: (map['latitud'] as num?)?.toDouble() ?? 0.0,
-      longitud: (map['longitud'] as num?)?.toDouble() ?? 0.0,
+      latitud: (map['latitud'] as num?)?.toDouble() ?? 0,
+      longitud: (map['longitud'] as num?)?.toDouble() ?? 0,
       fechaHora: (map['fechaHora'] as Timestamp?)?.toDate() ?? DateTime.now(),
+
       vacunadorId: map['vacunadorId'] ?? '',
       vacunadorNombre: map['vacunadorNombre'] ?? '',
+
+      sectorId: map['sectorId'] ?? '',
+      sectorNombre: map['sectorNombre'] ?? '',
     );
   }
 }
