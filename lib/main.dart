@@ -26,6 +26,7 @@ import 'views/auth/change_password_view.dart';
 // Importación de Vistas Dashboard
 import 'views/dashboard/campana_dashboard.dart';
 import 'views/dashboard/brigada_dashboard.dart';
+import 'views/dashboard/vaccinator_dashboard.dart';
 
 // Importación de Vistas Sectores
 import 'views/sectors/sectors_list_view.dart';
@@ -44,13 +45,11 @@ import 'views/vaccinations/vaccinations_page.dart';
 import 'views/vaccinations/vaccination_form_page.dart';
 
 void main() async {
-  // Asegurar que Flutter esté inicializado
   WidgetsFlutterBinding.ensureInitialized();
 
   bool isFirebaseInitialized = false;
 
   try {
-    // Inicializar Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -63,11 +62,9 @@ void main() async {
     isFirebaseInitialized = false;
   }
 
-  // Inicializar servicios principales
   final authService = AuthService(isFirebaseInitialized);
   final firestoreService = FirestoreService(isFirebaseInitialized);
 
-  // Ejecutar el Seed automático al iniciar la app
   await SeedService.checkAndSeed(firestoreService);
 
   runApp(
@@ -91,21 +88,21 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: VetTheme.lightTheme,
       initialRoute: '/login',
-
-      // Rutas fijas sencillas
       routes: {
         '/login': (context) => const LoginView(),
         '/forgot_password': (context) => const ForgotPasswordView(),
         '/change_password': (context) => const ChangePasswordView(),
+
         '/campana_dashboard': (context) => const CampanaDashboard(),
         '/brigada_dashboard': (context) => const BrigadaDashboard(),
+        '/vaccinator_dashboard': (context) => const VaccinatorDashboard(),
+
         '/sectors': (context) => const SectorsListView(),
         '/coordinators': (context) => const CoordinatorsListView(),
         '/vaccinators': (context) => const VaccinatorsPage(),
+
         '/vaccinations': (context) => const VaccinationsPage(),
       },
-
-      // OnGenerateRoute para rutas que requieren pasar parámetros dinámicos
       onGenerateRoute: (settings) {
         if (settings.name == '/sector_form') {
           final SectorModel? sector = settings.arguments as SectorModel?;

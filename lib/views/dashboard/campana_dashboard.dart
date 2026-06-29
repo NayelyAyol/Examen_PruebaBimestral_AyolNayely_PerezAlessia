@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../models/coordinator_model.dart';
+import '../../models/sector_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
-import '../../models/sector_model.dart';
-import '../../models/coordinator_model.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
 
@@ -13,7 +14,8 @@ class CampanaDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final firestoreService =
+        Provider.of<FirestoreService>(context, listen: false);
     final user = authService.currentUser;
 
     return Scaffold(
@@ -22,7 +24,6 @@ class CampanaDashboard extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: VetTheme.textDark),
-            tooltip: 'Cerrar Sesión',
             onPressed: () async {
               await authService.logout();
               if (context.mounted) {
@@ -37,59 +38,69 @@ class CampanaDashboard extends StatelessWidget {
           decoration: VetTheme.backgroundGradient,
           child: Column(
             children: [
-              // Encabezado Drawer
               UserAccountsDrawerHeader(
                 decoration: const BoxDecoration(color: Colors.transparent),
                 currentAccountPicture: const CircleAvatar(
                   backgroundColor: VetTheme.primary,
-                  child: Icon(Icons.admin_panel_settings, color: Colors.white, size: 40),
+                  child: Icon(
+                    Icons.admin_panel_settings,
+                    color: Colors.white,
+                    size: 40,
+                  ),
                 ),
                 accountName: Text(
-                  user?.name ?? 'Dr. Campaña',
-                  style: const TextStyle(color: VetTheme.textDark, fontWeight: FontWeight.bold, fontSize: 16),
+                  user?.name ?? 'Coordinador de Campaña',
+                  style: const TextStyle(
+                    color: VetTheme.textDark,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 accountEmail: Text(
                   user?.email ?? 'campana@vet.com',
-                  style: const TextStyle(color: VetTheme.textLight, fontSize: 14),
+                  style: const TextStyle(color: VetTheme.textLight),
                 ),
               ),
-              const Divider(color: VetTheme.glassBorder, thickness: 1),
-              
-              // Opciones
+              const Divider(color: VetTheme.glassBorder),
               ListTile(
-                leading: const Icon(Icons.dashboard_outlined, color: VetTheme.primary),
-                title: const Text('Inicio', style: TextStyle(color: VetTheme.textDark)),
+                leading: const Icon(
+                  Icons.dashboard_outlined,
+                  color: VetTheme.primary,
+                ),
+                title: const Text('Inicio'),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
-                leading: const Icon(Icons.map_outlined, color: VetTheme.primary),
-                title: const Text('Gestionar Sectores', style: TextStyle(color: VetTheme.textDark)),
+                leading: const Icon(
+                  Icons.map_outlined,
+                  color: VetTheme.primary,
+                ),
+                title: const Text('Gestionar Sectores'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/sectors');
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.people_alt_outlined, color: VetTheme.primary),
-                title: const Text('Gestionar Coordinadores', style: TextStyle(color: VetTheme.textDark)),
+                leading: const Icon(
+                  Icons.people_alt_outlined,
+                  color: VetTheme.primary,
+                ),
+                title: const Text('Gestionar Coordinadores'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/coordinators');
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.lock_reset_outlined, color: VetTheme.primary),
-                title: const Text('Cambiar Contraseña', style: TextStyle(color: VetTheme.textDark)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/change_password');
-                },
-              ),
               const Spacer(),
-              const Divider(color: VetTheme.glassBorder, thickness: 1),
               ListTile(
                 leading: const Icon(Icons.logout, color: VetTheme.accent),
-                title: const Text('Cerrar Sesión', style: TextStyle(color: VetTheme.accent, fontWeight: FontWeight.bold)),
+                title: const Text(
+                  'Cerrar Sesión',
+                  style: TextStyle(
+                    color: VetTheme.accent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 onTap: () async {
                   await authService.logout();
                   if (context.mounted) {
@@ -110,208 +121,265 @@ class CampanaDashboard extends StatelessWidget {
             return StreamBuilder<List<CoordinatorModel>>(
               stream: firestoreService.getCoordinatorsStream(),
               builder: (context, coordinatorsSnapshot) {
-                // Métricas
                 final sectors = sectorsSnapshot.data ?? [];
                 final coordinators = coordinatorsSnapshot.data ?? [];
-                
-                final int totalSectors = sectors.length;
-                final int activeCoordinators = coordinators.where((c) => c.status == 'Activo').length;
-                final int completedSectors = sectors.where((s) => s.status == 'Completado').length;
-                final double completedPercentage = totalSectors > 0 
-                    ? (completedSectors / totalSectors) * 100 
-                    : 0.0;
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Mensaje bienvenida
-                      Row(
-                        children: [
-                          const Icon(Icons.waving_hand_outlined, color: VetTheme.primary, size: 24),
-                          const SizedBox(width: 8),
-                          Text(
-                            '¡Hola, ${user?.name.split(" ").first ?? "Doctor"}!',
-                            style: const TextStyle(
-                              color: VetTheme.textDark,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
+                final totalSectors = sectors.length;
+                final activeCoordinators =
+                    coordinators.where((c) => c.status == 'Activo').length;
+                final assignedSectors = sectors
+                    .where(
+                      (s) =>
+                          s.assignedCoordinatorId != null &&
+                          s.assignedCoordinatorId!.isNotEmpty,
+                    )
+                    .length;
+                final unassignedSectors = totalSectors - assignedSectors;
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 600;
+                    final isTablet = constraints.maxWidth >= 600 &&
+                        constraints.maxWidth < 950;
+
+                    final horizontalPadding = isMobile ? 14.0 : 24.0;
+                    final maxContentWidth =
+                        constraints.maxWidth > 1000 ? 1000.0 : double.infinity;
+
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 18,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: maxContentWidth,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Resumen del estado de la campaña de vacunación.',
-                        style: TextStyle(color: VetTheme.textLight, fontSize: 15),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Tarjetas de Métricas en Fila / Grid
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          double cardWidth = (constraints.maxWidth - 16) / 2;
-                          return Wrap(
-                            spacing: 16,
-                            runSpacing: 16,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildMetricCard(
-                                title: 'Sectores Totales',
-                                value: totalSectors.toString(),
-                                icon: Icons.map,
-                                color: VetTheme.primary,
-                                width: cardWidth,
-                              ),
-                              _buildMetricCard(
-                                title: 'Brigadas Activas',
-                                value: activeCoordinators.toString(),
-                                icon: Icons.people,
-                                color: Colors.blueAccent,
-                                width: cardWidth,
-                              ),
-                              _buildMetricCard(
-                                title: 'Completados',
-                                value: '$completedSectors / $totalSectors',
-                                subtitle: '${completedPercentage.toStringAsFixed(0)}% de avance',
-                                icon: Icons.check_circle,
-                                color: Colors.green,
-                                width: cardWidth,
-                              ),
-                              _buildMetricCard(
-                                title: 'Pendientes',
-                                value: sectors.where((s) => s.status == 'Pendiente').length.toString(),
-                                icon: Icons.pending_actions,
-                                color: VetTheme.accent,
-                                width: cardWidth,
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Accesos Directos
-                      const Text(
-                        'Accesos Rápidos',
-                        style: TextStyle(
-                          color: VetTheme.textDark,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => Navigator.pushNamed(context, '/sectors'),
-                              child: const GlassCard(
-                                padding: EdgeInsets.symmetric(vertical: 20),
-                                child: Column(
+                              GlassCard(
+                                width: double.infinity,
+                                padding: EdgeInsets.all(isMobile ? 16 : 20),
+                                child: Row(
                                   children: [
-                                    Icon(Icons.edit_road, color: VetTheme.primary, size: 32),
-                                    SizedBox(height: 8),
-                                    Text('CRUD Sectores', style: TextStyle(fontWeight: FontWeight.bold, color: VetTheme.textDark)),
+                                    Container(
+                                      width: isMobile ? 46 : 58,
+                                      height: isMobile ? 46 : 58,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            VetTheme.primary.withOpacity(0.08),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: VetTheme.primary
+                                              .withOpacity(0.12),
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.waving_hand_outlined,
+                                        color: VetTheme.primary,
+                                        size: isMobile ? 26 : 32,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '¡Hola, ${user?.name.split(" ").first ?? "Doctor"}!',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: VetTheme.textDark,
+                                              fontSize: isMobile ? 21 : 26,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          const Text(
+                                            'Resumen general de la campaña de vacunación.',
+                                            style: TextStyle(
+                                              color: VetTheme.textLight,
+                                              fontSize: 14,
+                                              height: 1.3,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => Navigator.pushNamed(context, '/coordinators'),
-                              child: const GlassCard(
-                                padding: EdgeInsets.symmetric(vertical: 20),
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.person_add_alt_1, color: VetTheme.primary, size: 32),
-                                    SizedBox(height: 8),
-                                    Text('Coordinadores', style: TextStyle(fontWeight: FontWeight.bold, color: VetTheme.textDark)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 28),
 
-                      // Lista de Sectores Recientes
-                      const Text(
-                        'Monitoreo de Sectores (Quito)',
-                        style: TextStyle(
-                          color: VetTheme.textDark,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (sectors.isEmpty)
-                        const GlassCard(
-                          width: double.infinity,
-                          child: Center(
-                            child: Text('Cargando sectores...', style: TextStyle(color: VetTheme.textLight)),
-                          ),
-                        )
-                      else
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: sectors.length > 5 ? 5 : sectors.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final sector = sectors[index];
-                            Color statusColor = VetTheme.textLight;
-                            IconData statusIcon = Icons.hourglass_empty;
-                            if (sector.status == 'En Proceso') {
-                              statusColor = Colors.orange;
-                              statusIcon = Icons.cached;
-                            } else if (sector.status == 'Completado') {
-                              statusColor = Colors.green;
-                              statusIcon = Icons.check_circle_outline;
-                            }
-                            return GlassCard(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
+                              const SizedBox(height: 18),
+
+                              _MetricsGrid(
+                                isMobile: isMobile,
+                                isTablet: isTablet,
                                 children: [
-                                  CircleAvatar(
-                                    backgroundColor: VetTheme.primary.withOpacity(0.1),
-                                    child: const Icon(Icons.pets, color: VetTheme.primary),
+                                  _MetricCard(
+                                    title: 'Sectores',
+                                    value: totalSectors.toString(),
+                                    icon: Icons.map_outlined,
+                                    color: VetTheme.primary,
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          sector.name,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, color: VetTheme.textDark, fontSize: 16),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Zona: ${sector.zone} | Asignado a: ${sector.assignedCoordinatorName ?? "Ninguno"}',
-                                          style: const TextStyle(color: VetTheme.textLight, fontSize: 13),
-                                        ),
-                                      ],
-                                    ),
+                                  _MetricCard(
+                                    title: 'Brigadas',
+                                    value: activeCoordinators.toString(),
+                                    icon: Icons.groups_2_outlined,
+                                    color: Colors.blueAccent,
                                   ),
-                                  Chip(
-                                    avatar: Icon(statusIcon, color: Colors.white, size: 16),
-                                    label: Text(
-                                      sector.status,
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                                    ),
-                                    backgroundColor: statusColor,
+                                  _MetricCard(
+                                    title: 'Asignados',
+                                    value: assignedSectors.toString(),
+                                    icon: Icons.assignment_ind_outlined,
+                                    color: Colors.green,
+                                  ),
+                                  _MetricCard(
+                                    title: 'Sin Coord.',
+                                    value: unassignedSectors.toString(),
+                                    icon: Icons.person_off_outlined,
+                                    color: VetTheme.accent,
                                   ),
                                 ],
                               ),
-                            );
-                          },
+
+                              const SizedBox(height: 26),
+
+                              const Text(
+                                'Accesos Rápidos',
+                                style: TextStyle(
+                                  color: VetTheme.textDark,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _QuickAction(
+                                      title: 'CRUD Sectores',
+                                      icon: Icons.edit_road,
+                                      onTap: () => Navigator.pushNamed(
+                                        context,
+                                        '/sectors',
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: _QuickAction(
+                                      title: 'Coordinadores',
+                                      icon: Icons.person_add_alt_1,
+                                      onTap: () => Navigator.pushNamed(
+                                        context,
+                                        '/coordinators',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 26),
+
+                              const Text(
+                                'Monitoreo de Sectores',
+                                style: TextStyle(
+                                  color: VetTheme.textDark,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              if (sectors.isEmpty)
+                                const GlassCard(
+                                  width: double.infinity,
+                                  child: Center(
+                                    child: Text(
+                                      'No hay sectores registrados.',
+                                      style:
+                                          TextStyle(color: VetTheme.textLight),
+                                    ),
+                                  ),
+                                )
+                              else
+                                ListView.separated(
+                                  shrinkWrap: true,
+                                  physics:
+                                      const NeverScrollableScrollPhysics(),
+                                  itemCount:
+                                      sectors.length > 5 ? 5 : sectors.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 12),
+                                  itemBuilder: (context, index) {
+                                    final sector = sectors[index];
+
+                                    return GlassCard(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor: VetTheme.primary
+                                                .withOpacity(0.1),
+                                            child: const Icon(
+                                              Icons.pets,
+                                              color: VetTheme.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  sector.name,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: VetTheme.textDark,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Zona: ${sector.zone}',
+                                                  style: const TextStyle(
+                                                    color: VetTheme.textLight,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Asignado a: ${sector.assignedCoordinatorName ?? "Ninguno"}',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    color: VetTheme.textLight,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                            ],
+                          ),
                         ),
-                    ],
-                  ),
+                      ),
+                    );
+                  },
                 );
               },
             );
@@ -320,44 +388,149 @@ class CampanaDashboard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildMetricCard({
-    required String title,
-    required String value,
-    String? subtitle,
-    required IconData icon,
-    required Color color,
-    required double width,
-  }) {
+class _MetricsGrid extends StatelessWidget {
+  final bool isMobile;
+  final bool isTablet;
+  final List<Widget> children;
+
+  const _MetricsGrid({
+    required this.isMobile,
+    required this.isTablet,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: isMobile ? 2 : 4,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: isMobile ? 12 : 16,
+      mainAxisSpacing: isMobile ? 12 : 16,
+      childAspectRatio: isMobile
+          ? 0.95
+          : isTablet
+              ? 1.15
+              : 1.2,
+      children: children,
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _MetricCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GlassCard(
-      width: width,
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(color: VetTheme.textLight, fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-              Icon(icon, color: color, size: 24),
-            ],
+          Container(
+            height: 46,
+            width: 46,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 26,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: VetTheme.textLight,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(color: VetTheme.textDark, fontSize: 22, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: color,
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: GlassCard(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          vertical: 18,
+          horizontal: 10,
+        ),
+        child: Column(
+          children: [
+            Container(
+              height: 42,
+              width: 42,
+              decoration: BoxDecoration(
+                color: VetTheme.primary.withOpacity(0.10),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: VetTheme.primary,
+                size: 25,
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
-              subtitle,
-              style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: VetTheme.textDark,
+                fontSize: 13,
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

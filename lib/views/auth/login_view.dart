@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../services/auth_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
@@ -17,6 +19,7 @@ class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -37,31 +40,64 @@ class _LoginViewState extends State<LoginView> {
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
+
       await authService.login(
-        _emailController.text,
-        _passwordController.text,
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
       if (!mounted) return;
 
-      // Obtener el usuario autenticado
       final user = authService.currentUser;
-      if (user != null) {
-        if (user.isFirstLogin) {
-          // Si es su primer inicio de sesión, redirigir a cambio de contraseña
-          Navigator.pushReplacementNamed(context, '/change_password');
-        } else {
-          // Redirigir según el rol
-          if (user.role == 'coordinador_campana') {
-            Navigator.pushReplacementNamed(context, '/campana_dashboard');
-          } else {
-            Navigator.pushReplacementNamed(context, '/brigada_dashboard');
-          }
-        }
+
+      if (user == null) {
+        setState(() {
+          _errorMessage = 'El correo no está registrado.';
+        });
+        return;
       }
-    } catch (e) {
+
+      if (user.isFirstLogin) {
+        Navigator.pushReplacementNamed(context, '/change_password');
+        return;
+      }
+
+      if (user.role == 'coordinador_campana') {
+        Navigator.pushReplacementNamed(context, '/campana_dashboard');
+      } else if (user.role == 'coordinador_brigada') {
+        Navigator.pushReplacementNamed(context, '/brigada_dashboard');
+      } else if (user.role == 'vacunador') {
+        Navigator.pushReplacementNamed(context, '/vaccinator_dashboard');
+      } else {
+        setState(() {
+          _errorMessage = 'Usuario deshabilitado.';
+        });
+      }
+    } on FirebaseAuthException catch (e) {
+      String mensaje = 'Correo o contraseña incorrectos.';
+
+      switch (e.code) {
+        case 'invalid-email':
+          mensaje = 'Correo electrónico inválido.';
+          break;
+        case 'user-not-found':
+          mensaje = 'El correo no está registrado.';
+          break;
+        case 'wrong-password':
+        case 'invalid-credential':
+          mensaje = 'Correo o contraseña incorrectos.';
+          break;
+        case 'user-disabled':
+          mensaje = 'Usuario deshabilitado.';
+          break;
+      }
+
       setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '').replaceAll('FirebaseAuthException: ', '');
+        _errorMessage = mensaje;
+      });
+    } catch (_) {
+      setState(() {
+        _errorMessage = 'Correo o contraseña incorrectos.';
       });
     } finally {
       if (mounted) {
@@ -83,7 +119,6 @@ class _LoginViewState extends State<LoginView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo de Huella / Veterinaria con micro-animación de escala implícita
               const Icon(
                 Icons.pets,
                 size: 80,
@@ -108,7 +143,6 @@ class _LoginViewState extends State<LoginView> {
               ),
               const SizedBox(height: 32),
 
-              // Tarjeta Glassmorphic de Login
               GlassCard(
                 child: Form(
                   key: _formKey,
@@ -131,16 +165,24 @@ class _LoginViewState extends State<LoginView> {
                           decoration: BoxDecoration(
                             color: VetTheme.accent.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: VetTheme.accent.withOpacity(0.3)),
+                            border: Border.all(
+                              color: VetTheme.accent.withOpacity(0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.error_outline, color: VetTheme.accent),
+                              const Icon(
+                                Icons.error_outline,
+                                color: VetTheme.accent,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   _errorMessage!,
-                                  style: const TextStyle(color: VetTheme.accent, fontSize: 14),
+                                  style: const TextStyle(
+                                    color: VetTheme.accent,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ),
                             ],
@@ -149,7 +191,6 @@ class _LoginViewState extends State<LoginView> {
                         const SizedBox(height: 20),
                       ],
 
-                      // Email
                       CustomTextField(
                         controller: _emailController,
                         labelText: 'Correo Electrónico',
@@ -159,16 +200,21 @@ class _LoginViewState extends State<LoginView> {
                           if (value == null || value.trim().isEmpty) {
                             return 'El correo es obligatorio';
                           }
-                          final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+                          final emailRegExp = RegExp(
+                            r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$',
+                          );
+
                           if (!emailRegExp.hasMatch(value.trim())) {
                             return 'Ingresa un correo electrónico válido';
                           }
+
                           return null;
                         },
                       ),
+
                       const SizedBox(height: 16),
 
-                      // Password
                       CustomTextField(
                         controller: _passwordController,
                         labelText: 'Contraseña',
@@ -178,15 +224,17 @@ class _LoginViewState extends State<LoginView> {
                           if (value == null || value.isEmpty) {
                             return 'La contraseña es obligatoria';
                           }
+
                           if (value.length < 6) {
                             return 'La contraseña debe tener al menos 6 caracteres';
                           }
+
                           return null;
                         },
                       ),
+
                       const SizedBox(height: 12),
 
-                      // Recuperar contraseña
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
@@ -202,9 +250,9 @@ class _LoginViewState extends State<LoginView> {
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 16),
 
-                      // Botón Ingresar
                       CustomButton(
                         text: 'Ingresar',
                         isLoading: _isLoading,
@@ -214,9 +262,9 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 24),
-              
-              // Información de ayuda de roles en modo demo
+
               Text(
                 'Modo Demo Credenciales:\nAdmin: campana@vet.com | Brigada: brigada@vet.com\nContraseña inicial: Ecuador2026',
                 textAlign: TextAlign.center,

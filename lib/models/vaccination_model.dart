@@ -5,16 +5,19 @@ class VaccinationModel {
   final String nombrePropietario;
   final String cedulaPropietario;
   final String telefono;
-  final String tipoMascota; 
+  final String tipoMascota;
   final String nombreMascota;
   final String edadAproximada;
   final String sexo;
   final String vacunaAplicada;
   final String observaciones;
-  final String fotografia; // Almacenará únicamente la ruta local del archivo (Path)
+  final String fotografia;
   final double latitud;
   final double longitud;
   final DateTime fechaHora;
+
+  final String vacunadorId;
+  final String vacunadorNombre;
 
   VaccinationModel({
     required this.id,
@@ -31,6 +34,8 @@ class VaccinationModel {
     required this.latitud,
     required this.longitud,
     required this.fechaHora,
+    this.vacunadorId = '',
+    this.vacunadorNombre = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -44,10 +49,12 @@ class VaccinationModel {
       'sexo': sexo,
       'vacunaAplicada': vacunaAplicada,
       'observaciones': observaciones,
-      'fotografia': fotografia, // Guarda el path de texto regular
+      'fotografia': fotografia,
       'latitud': latitud,
       'longitud': longitud,
       'fechaHora': Timestamp.fromDate(fechaHora),
+      'vacunadorId': vacunadorId,
+      'vacunadorNombre': vacunadorNombre,
     };
   }
 
@@ -67,6 +74,8 @@ class VaccinationModel {
       latitud: (map['latitud'] as num?)?.toDouble() ?? 0.0,
       longitud: (map['longitud'] as num?)?.toDouble() ?? 0.0,
       fechaHora: (map['fechaHora'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      vacunadorId: map['vacunadorId'] ?? '',
+      vacunadorNombre: map['vacunadorNombre'] ?? '',
     );
   }
 }

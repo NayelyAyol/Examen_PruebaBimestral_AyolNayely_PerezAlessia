@@ -1,12 +1,15 @@
-import 'dart:io'; // Fundamental para el manejo de File local
+import 'dart:typed_data';
 
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; 
-import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/vaccination_model.dart';
+import '../../services/auth_service.dart';
 import '../../services/vaccination_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/custom_button.dart';
@@ -15,10 +18,13 @@ import '../../widgets/glass_card.dart';
 class VaccinationFormPage extends StatefulWidget {
   final VaccinationModel? vaccinationToEdit;
 
-  const VaccinationFormPage({Key? key, this.vaccinationToEdit}) : super(key: key);
+  const VaccinationFormPage({
+    super.key,
+    this.vaccinationToEdit,
+  });
 
   @override
-  _VaccinationFormPageState createState() => _VaccinationFormPageState();
+  State<VaccinationFormPage> createState() => _VaccinationFormPageState();
 }
 
 class _VaccinationFormPageState extends State<VaccinationFormPage> {
@@ -36,10 +42,14 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
 
   String _petType = 'Perro';
   String _petGender = 'Macho';
-  String? _localImagePath; // Guarda el path local del dispositivo (ej. '/storage/emulated/0/...')
+
+  String? _photoUrl;
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageName;
+
   double _latitude = 0.0;
   double _longitude = 0.0;
-  
+
   bool _isLoading = false;
   bool _isGettingLocation = false;
 
@@ -48,9 +58,10 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
   @override
   void initState() {
     super.initState();
-    
+
     if (isEditing) {
       final vac = widget.vaccinationToEdit!;
+
       _ownerNameCtrl.text = vac.nombrePropietario;
       _ownerIdCtrl.text = vac.cedulaPropietario;
       _phoneCtrl.text = vac.telefono;
@@ -58,9 +69,11 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
       _ageCtrl.text = vac.edadAproximada;
       _vaccineCtrl.text = vac.vacunaAplicada;
       _obsCtrl.text = vac.observaciones;
+
       _petType = vac.tipoMascota;
       _petGender = vac.sexo;
-      _localImagePath = vac.fotografia;
+
+      _photoUrl = vac.fotografia;
       _latitude = vac.latitud;
       _longitude = vac.longitud;
     } else {
@@ -82,43 +95,67 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
 
   Future<void> _getCurrentLocation() async {
     setState(() => _isGettingLocation = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+      if (!serviceEnabled) {
+        _showSnack('Activa el GPS del dispositivo.');
+        return;
       }
 
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        _showSnack('Permiso de ubicación denegado.');
+        return;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _showSnack('El permiso de ubicación fue denegado permanentemente.');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
       );
-      
+
+      if (!mounted) return;
+
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
       });
     } catch (e) {
-      debugPrint('Error GPS: $e');
+      _showSnack('Error al obtener GPS: $e');
     } finally {
-      if (mounted) setState(() => _isGettingLocation = false);
+      if (mounted) {
+        setState(() => _isGettingLocation = false);
+      }
     }
   }
 
   Future<void> _openGoogleMaps() async {
     if (_latitude == 0 || _longitude == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Primero captura la ubicación GPS'), backgroundColor: VetTheme.accent),
-      );
+      _showSnack('Primero captura la ubicación GPS.');
       return;
     }
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$_latitude,$_longitude');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir Google Maps'), backgroundColor: VetTheme.accent),
-      );
+
+    final url = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$_latitude,$_longitude',
+    );
+
+    final opened = await launchUrl(
+      url,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!opened) {
+      _showSnack('No se pudo abrir Google Maps.');
     }
   }
 
@@ -126,29 +163,40 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (_) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt_outlined, color: VetTheme.primary),
-                title: const Text('Tomar Foto con Cámara'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickPhoto(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined, color: VetTheme.primary),
-                title: const Text('Escoger de la Galería'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickPhoto(ImageSource.gallery);
-                },
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(
+                    Icons.camera_alt_outlined,
+                    color: VetTheme.primary,
+                  ),
+                  title: const Text('Tomar foto con cámara'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickPhoto(ImageSource.camera);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.photo_library_outlined,
+                    color: VetTheme.primary,
+                  ),
+                  title: const Text('Escoger de galería'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickPhoto(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -157,28 +205,81 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
 
   Future<void> _pickPhoto(ImageSource source) async {
     try {
-      final XFile? image = await _picker.pickImage(source: source, imageQuality: 75);
+      final image = await _picker.pickImage(
+        source: source,
+        imageQuality: 65,
+        maxWidth: 900,
+      );
+
       if (image == null) return;
+
+      final bytes = await image.readAsBytes();
+
       setState(() {
-        _localImagePath = image.path; // Almacenamos la ruta interna local
+        _selectedImageBytes = bytes;
+        _selectedImageName = image.name;
       });
     } catch (e) {
-      debugPrint('Error al capturar imagen: $e');
+      _showSnack('Error al seleccionar imagen: $e');
     }
+  }
+
+  Future<String> _uploadPhotoToStorage() async {
+    if (_selectedImageBytes == null) {
+      return _photoUrl ?? '';
+    }
+
+    final cedula = _ownerIdCtrl.text.trim();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final fileName = _selectedImageName ?? 'foto_$timestamp.jpg';
+
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('vacunaciones')
+        .child(cedula)
+        .child('${timestamp}_$fileName');
+
+    final metadata = SettableMetadata(
+      contentType: 'image/jpeg',
+      customMetadata: {
+        'cedulaPropietario': cedula,
+        'tipo': 'evidencia_vacunacion',
+      },
+    );
+
+    final uploadTask = await ref.putData(
+      _selectedImageBytes!,
+      metadata,
+    );
+
+    return uploadTask.ref.getDownloadURL();
   }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_localImagePath == null || _localImagePath!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, agregue la fotografía de evidencia.'), backgroundColor: VetTheme.accent),
-      );
+
+    final hasExistingPhoto = _photoUrl != null && _photoUrl!.isNotEmpty;
+    final hasNewPhoto = _selectedImageBytes != null;
+
+    if (!hasExistingPhoto && !hasNewPhoto) {
+      _showSnack('Agrega una fotografía de evidencia.');
       return;
     }
 
+    if (_latitude == 0 || _longitude == 0) {
+      _showSnack('Captura la ubicación GPS.');
+      return;
+    }
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final user = authService.currentUser;
+
     setState(() => _isLoading = true);
+
     try {
-      final newVaccination = VaccinationModel(
+      final uploadedPhotoUrl = await _uploadPhotoToStorage();
+
+      final vaccination = VaccinationModel(
         id: widget.vaccinationToEdit?.id ?? '',
         nombrePropietario: _ownerNameCtrl.text.trim(),
         cedulaPropietario: _ownerIdCtrl.text.trim(),
@@ -189,24 +290,41 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
         sexo: _petGender,
         vacunaAplicada: _vaccineCtrl.text.trim(),
         observaciones: _obsCtrl.text.trim(),
-        fotografia: _localImagePath!, // Mandamos la ruta corta de texto a Firestore
+        fotografia: uploadedPhotoUrl,
         latitud: _latitude,
         longitud: _longitude,
         fechaHora: widget.vaccinationToEdit?.fechaHora ?? DateTime.now(),
+        vacunadorId: widget.vaccinationToEdit?.vacunadorId ?? user?.uid ?? '',
+        vacunadorNombre:
+            widget.vaccinationToEdit?.vacunadorNombre ?? user?.name ?? '',
       );
 
       if (isEditing) {
-        await _vaccinationService.updateVaccination(newVaccination);
+        await _vaccinationService.updateVaccination(vaccination);
       } else {
-        await _vaccinationService.saveVaccination(newVaccination);
+        await _vaccinationService.saveVaccination(vaccination);
       }
 
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e'), backgroundColor: VetTheme.accent));
+      _showSnack('Error al guardar vacunación: $e');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: VetTheme.accent,
+      ),
+    );
   }
 
   Widget _buildTextField({
@@ -222,7 +340,54 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,
-      decoration: InputDecoration(labelText: labelText, prefixIcon: Icon(prefixIcon, color: VetTheme.primary)),
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: Icon(prefixIcon, color: VetTheme.primary),
+      ),
+    );
+  }
+
+  Widget _buildPhotoPreview() {
+    if (_selectedImageBytes != null) {
+      return Image.memory(
+        _selectedImageBytes!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    }
+
+    if (_photoUrl != null && _photoUrl!.isNotEmpty) {
+      return Image.network(
+        _photoUrl!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, __, ___) {
+          return const Center(
+            child: Text(
+              'No se pudo cargar la imagen',
+              style: TextStyle(color: VetTheme.textLight),
+            ),
+          );
+        },
+      );
+    }
+
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.camera_alt_outlined,
+          color: VetTheme.primary,
+          size: 42,
+        ),
+        SizedBox(height: 8),
+        Text(
+          'No hay fotografía registrada',
+          style: TextStyle(color: VetTheme.textLight),
+        ),
+      ],
     );
   }
 
@@ -231,34 +396,54 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
     final hasLocation = _latitude != 0 && _longitude != 0;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? 'Editar Vacunación' : 'Registrar Vacunación')),
+      appBar: AppBar(
+        title: Text(
+          isEditing ? 'Editar Vacunación' : 'Registrar Vacunación',
+        ),
+      ),
       body: Container(
         decoration: VetTheme.backgroundGradient,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(20),
           child: GlassCard(
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Datos del propietario', style: TextStyle(color: VetTheme.textDark, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Datos del propietario',
+                    style: TextStyle(
+                      color: VetTheme.textDark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _buildTextField(
                     controller: _ownerNameCtrl,
-                    labelText: 'Nombre del Propietario',
+                    labelText: 'Nombre del propietario',
                     prefixIcon: Icons.person_outline,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'))],
-                    validator: (v) => v!.trim().isEmpty ? 'El nombre es obligatorio' : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                      ),
+                    ],
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'El nombre es obligatorio' : null,
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
                     controller: _ownerIdCtrl,
-                    labelText: 'Cédula del Propietario',
+                    labelText: 'Cédula del propietario',
                     prefixIcon: Icons.badge_outlined,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-                    validator: (v) => v!.trim().length != 10 ? 'Cédula inválida (10 dígitos)' : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    validator: (v) =>
+                        v == null || v.trim().length != 10 ? 'Cédula inválida' : null,
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
@@ -266,104 +451,195 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
                     labelText: 'Teléfono',
                     prefixIcon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-                    validator: (v) => v!.trim().length != 10 ? 'Teléfono inválido (10 dígitos)' : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    validator: (v) =>
+                        v == null || v.trim().length != 10 ? 'Teléfono inválido' : null,
                   ),
-                  
                   const SizedBox(height: 26),
-                  const Text('Datos de la mascota', style: TextStyle(color: VetTheme.textDark, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Datos de la mascota',
+                    style: TextStyle(
+                      color: VetTheme.textDark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: _petType,
-                    decoration: const InputDecoration(labelText: 'Tipo de Mascota', prefixIcon: Icon(Icons.pets, color: VetTheme.primary)),
-                    items: const [DropdownMenuItem(value: 'Perro', child: Text('Perro')), DropdownMenuItem(value: 'Gato', child: Text('Gato'))],
-                    onChanged: (val) => setState(() => _petType = val!),
+                    decoration: const InputDecoration(
+                      labelText: 'Tipo de mascota',
+                      prefixIcon: Icon(Icons.pets, color: VetTheme.primary),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Perro', child: Text('Perro')),
+                      DropdownMenuItem(value: 'Gato', child: Text('Gato')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => _petType = value);
+                    },
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
                     controller: _petNameCtrl,
-                    labelText: 'Nombre de la Mascota',
+                    labelText: 'Nombre de la mascota',
                     prefixIcon: Icons.cruelty_free_outlined,
-                    validator: (v) => v!.trim().isEmpty ? 'Requerido' : null,
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'El nombre de la mascota es obligatorio'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
                     controller: _ageCtrl,
-                    labelText: 'Edad Aproximada',
+                    labelText: 'Edad aproximada',
                     prefixIcon: Icons.cake_outlined,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
-                    validator: (v) => v!.trim().isEmpty ? 'Requerido' : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(2),
+                    ],
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'La edad es obligatoria' : null,
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: _petGender,
-                    decoration: const InputDecoration(labelText: 'Sexo', prefixIcon: Icon(Icons.transgender, color: VetTheme.primary)),
-                    items: const [DropdownMenuItem(value: 'Macho', child: Text('Macho')), DropdownMenuItem(value: 'Hembra', child: Text('Hembra'))],
-                    onChanged: (val) => setState(() => _petGender = val!),
+                    decoration: const InputDecoration(
+                      labelText: 'Sexo',
+                      prefixIcon: Icon(Icons.transgender, color: VetTheme.primary),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Macho', child: Text('Macho')),
+                      DropdownMenuItem(value: 'Hembra', child: Text('Hembra')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => _petGender = value);
+                    },
                   ),
-                  
                   const SizedBox(height: 26),
-                  const Text('Datos de vacunación', style: TextStyle(color: VetTheme.textDark, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Datos de vacunación',
+                    style: TextStyle(
+                      color: VetTheme.textDark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _buildTextField(
                     controller: _vaccineCtrl,
-                    labelText: 'Vacuna Aplicada',
+                    labelText: 'Vacuna aplicada',
                     prefixIcon: Icons.vaccines_outlined,
-                    validator: (v) => v!.trim().isEmpty ? 'Campo obligatorio' : null,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'La vacuna es obligatoria' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _obsCtrl,
                     maxLines: 2,
-                    decoration: const InputDecoration(labelText: 'Observaciones', prefixIcon: Icon(Icons.notes_outlined, color: VetTheme.primary)),
+                    decoration: const InputDecoration(
+                      labelText: 'Observaciones',
+                      prefixIcon: Icon(Icons.notes_outlined, color: VetTheme.primary),
+                    ),
                   ),
-                  
                   const SizedBox(height: 26),
-                  const Text('Evidencia y ubicación', style: TextStyle(color: VetTheme.textDark, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Evidencia y ubicación',
+                    style: TextStyle(
+                      color: VetTheme.textDark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  
-                  // Renderizado nativo local directo desde el File Path
                   Container(
                     height: 190,
                     width: double.infinity,
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.50), borderRadius: BorderRadius.circular(18), border: Border.all(color: VetTheme.primary.withOpacity(0.18))),
-                    child: _localImagePath != null && _localImagePath!.isNotEmpty
-                        ? ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.file(File(_localImagePath!), fit: BoxFit.cover))
-                        : const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.camera_alt_outlined, color: VetTheme.primary, size: 42), SizedBox(height: 8), Text('No hay fotografía registrada', style: TextStyle(color: VetTheme.textLight))]),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.50),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: VetTheme.primary.withOpacity(0.18),
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _buildPhotoPreview(),
                   ),
                   const SizedBox(height: 12),
-                  SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _showPhotoOptions, icon: const Icon(Icons.add_a_photo_outlined), label: Text(_localImagePath != null ? 'Cambiar fotografía' : 'Agregar fotografía'))),
-                  
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _showPhotoOptions,
+                      icon: const Icon(Icons.add_a_photo_outlined),
+                      label: Text(
+                        _selectedImageBytes != null ||
+                                (_photoUrl != null && _photoUrl!.isNotEmpty)
+                            ? 'Cambiar fotografía'
+                            : 'Agregar fotografía',
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.55), borderRadius: BorderRadius.circular(18), border: Border.all(color: hasLocation ? VetTheme.primary.withOpacity(0.30) : VetTheme.primary.withOpacity(0.15))),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: VetTheme.primary.withOpacity(0.10), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.location_on_outlined, color: VetTheme.primary, size: 22)),
-                            const SizedBox(width: 12),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Ubicación GPS', style: TextStyle(color: VetTheme.textDark, fontWeight: FontWeight.bold, fontSize: 15)), Text(hasLocation ? 'Punto capturado correctamente' : 'No se ha capturado el GPS', style: const TextStyle(color: VetTheme.textLight, fontSize: 12))])),
-                          ],
-                        ),
-                        if (hasLocation) ...[
-                          const SizedBox(height: 12),
-                          Text('Latitud: ${_latitude.toStringAsFixed(6)}\nLongitud: ${_longitude.toStringAsFixed(6)}', style: const TextStyle(color: VetTheme.textLight, fontSize: 13, height: 1.4)),
-                        ],
-                      ],
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.55),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: hasLocation
+                            ? VetTheme.primary.withOpacity(0.30)
+                            : VetTheme.primary.withOpacity(0.15),
+                      ),
+                    ),
+                    child: Text(
+                      hasLocation
+                          ? 'Ubicación GPS capturada\nLatitud: ${_latitude.toStringAsFixed(6)}\nLongitud: ${_longitude.toStringAsFixed(6)}'
+                          : 'No se ha capturado el GPS',
+                      style: const TextStyle(
+                        color: VetTheme.textLight,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _isGettingLocation ? null : _getCurrentLocation, icon: _isGettingLocation ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.my_location, size: 19), label: Text(_isGettingLocation ? 'Obteniendo ubicación...' : 'Recapturar GPS'))),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isGettingLocation ? null : _getCurrentLocation,
+                      icon: _isGettingLocation
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location, size: 19),
+                      label: Text(
+                        _isGettingLocation
+                            ? 'Obteniendo ubicación...'
+                            : 'Capturar GPS',
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: hasLocation ? _openGoogleMaps : null, icon: const Icon(Icons.map_outlined, size: 19), label: const Text('Abrir en Google Maps'))),
-                  
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: hasLocation ? _openGoogleMaps : null,
+                      icon: const Icon(Icons.map_outlined, size: 19),
+                      label: const Text('Abrir en Google Maps'),
+                    ),
+                  ),
                   const SizedBox(height: 24),
-                  CustomButton(text: isEditing ? 'Guardar Cambios' : 'Registrar Vacunación', isLoading: _isLoading, onPressed: _submitForm),
+                  CustomButton(
+                    text: isEditing ? 'Guardar Cambios' : 'Registrar Vacunación',
+                    isLoading: _isLoading,
+                    onPressed: _submitForm,
+                  ),
                 ],
               ),
             ),
