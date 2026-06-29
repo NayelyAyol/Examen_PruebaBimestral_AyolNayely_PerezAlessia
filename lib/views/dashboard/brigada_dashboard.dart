@@ -322,32 +322,43 @@ class BrigadaDashboard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Actualizar estado:',
-                style: TextStyle(
-                  color: VetTheme.textDark,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'Actualizar estado:',
+                  style: TextStyle(
+                    color: VetTheme.textDark,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-              Row(
-                children: [
-                  _statusButton(
-                    context,
-                    firestoreService,
-                    sector,
-                    'En Proceso',
-                    Colors.orange,
-                  ),
-                  const SizedBox(width: 8),
-                  _statusButton(
-                    context,
-                    firestoreService,
-                    sector,
-                    'Completado',
-                    Colors.green,
-                  ),
-                ],
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 3,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _statusButton(
+                        context,
+                        firestoreService,
+                        sector,
+                        'En Proceso',
+                        Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _statusButton(
+                        context,
+                        firestoreService,
+                        sector,
+                        'Completado',
+                        Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -390,9 +401,12 @@ class BrigadaDashboard extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      child: Text(
-        targetStatus,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          targetStatus,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        ),
       ),
     );
   }
