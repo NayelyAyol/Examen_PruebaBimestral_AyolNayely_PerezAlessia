@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:gal/gal.dart';
 
 import '../../models/vaccination_model.dart';
 import '../../services/auth_service.dart';
@@ -232,6 +233,15 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
       setState(() {
         _selectedImageBytes = bytes;
       });
+
+      if (source == ImageSource.camera) {
+        try {
+          await Gal.putImage(image.path);
+          _showSnack('Imagen guardada en la galería del celular.');
+        } catch (galError) {
+          debugPrint("Error al guardar en galería: $galError");
+        }
+      }
     } catch (e) {
       _showSnack('Error al seleccionar imagen: $e');
     }
@@ -388,6 +398,23 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
     }
 
     if (_photoUrl != null && _photoUrl!.isNotEmpty) {
+      if (_photoUrl!.startsWith('http://') || _photoUrl!.startsWith('https://')) {
+        return Image.network(
+          _photoUrl!,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (_, __, ___) {
+            return const Center(
+              child: Text(
+                'No se pudo cargar la imagen de internet',
+                style: TextStyle(color: VetTheme.textLight),
+              ),
+            );
+          },
+        );
+      }
+
       final file = File(_photoUrl!);
 
       if (file.existsSync()) {

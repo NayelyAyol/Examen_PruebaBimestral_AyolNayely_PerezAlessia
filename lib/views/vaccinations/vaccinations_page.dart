@@ -42,6 +42,34 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
   Widget _buildPhoto(String photoPath) {
     if (photoPath.isEmpty) return const SizedBox.shrink();
 
+    if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          photoPath,
+          height: 150,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) {
+            return Container(
+              height: 150,
+              width: double.infinity,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.broken_image_outlined,
+                color: VetTheme.textLight,
+                size: 42,
+              ),
+            );
+          },
+        ),
+      );
+    }
+
     final file = File(photoPath);
 
     return ClipRRect(
@@ -338,57 +366,72 @@ class _VaccinationsPageState extends State<VaccinationsPage> {
           : null,
       body: Container(
         decoration: VetTheme.backgroundGradient,
-        child: StreamBuilder<List<VaccinationModel>>(
-          stream: stream,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 760;
+
               return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    'Error al cargar vacunaciones:\n${snapshot.error}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: VetTheme.accent),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isWide ? 800 : double.infinity,
+                  ),
+                  child: StreamBuilder<List<VaccinationModel>>(
+                    stream: stream,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              'Error al cargar vacunaciones:\n${snapshot.error}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: VetTheme.accent),
+                            ),
+                          ),
+                        );
+                      }
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(color: VetTheme.primary),
+                        );
+                      }
+
+                      final allowedVaccinations = _applyAllowedSectorFilter(
+                        snapshot.data ?? [],
+                      );
+
+                      final visibleVaccinations = _applySelectedSectorNameFilter(
+                        allowedVaccinations,
+                      );
+
+                      if (allowedVaccinations.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No hay vacunaciones registradas',
+                            style: TextStyle(color: VetTheme.textLight),
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(18),
+                        itemCount: visibleVaccinations.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return _buildSectorFilter(allowedVaccinations);
+                          }
+
+                          return _buildVaccinationCard(visibleVaccinations[index - 1]);
+                        },
+                      );
+                    },
                   ),
                 ),
               );
-            }
-
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: VetTheme.primary),
-              );
-            }
-
-            final allowedVaccinations = _applyAllowedSectorFilter(
-              snapshot.data ?? [],
-            );
-
-            final visibleVaccinations = _applySelectedSectorNameFilter(
-              allowedVaccinations,
-            );
-
-            if (allowedVaccinations.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No hay vacunaciones registradas',
-                  style: TextStyle(color: VetTheme.textLight),
-                ),
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(18),
-              itemCount: visibleVaccinations.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return _buildSectorFilter(allowedVaccinations);
-                }
-
-                return _buildVaccinationCard(visibleVaccinations[index - 1]);
-              },
-            );
-          },
+            },
+          ),
         ),
       ),
     );

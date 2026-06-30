@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/vaccinator_model.dart';
+import '../../services/auth_service.dart';
 import '../../services/vaccinator_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
@@ -293,12 +295,6 @@ class _VaccinatorsPageState extends State<VaccinatorsPage> {
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 18),
-            ElevatedButton.icon(
-              onPressed: () => _openForm(),
-              icon: const Icon(Icons.add),
-              label: const Text('Nuevo Vacunador'),
-            ),
           ],
         ),
       ),
@@ -308,6 +304,10 @@ class _VaccinatorsPageState extends State<VaccinatorsPage> {
   // Construye la interfaz principal
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final currentUser = authService.currentUser;
+    final createdById = currentUser?.rol == 'coordinador_brigada' ? currentUser?.uid : null;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestión de Vacunadores'),
@@ -370,7 +370,7 @@ class _VaccinatorsPageState extends State<VaccinatorsPage> {
 
                         Expanded(
                           child: StreamBuilder<List<VaccinatorModel>>(
-                            stream: _vaccinatorService.getVaccinatorsStream(),
+                            stream: _vaccinatorService.getVaccinatorsStream(createdById: createdById),
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {

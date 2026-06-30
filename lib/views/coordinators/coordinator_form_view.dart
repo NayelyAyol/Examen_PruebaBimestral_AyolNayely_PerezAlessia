@@ -152,11 +152,20 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
       ),
       body: Container(
         decoration: VetTheme.backgroundGradient,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              GlassCard(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 760;
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 600 : double.infinity,
+                ),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(isWide ? 32 : 24),
+                  child: Column(
+                    children: [
+                      GlassCard(
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -386,6 +395,9 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
           ),
         ),
       ),
+    ),
+  ),
+),
     );
   }
 }

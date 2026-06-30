@@ -7,6 +7,7 @@ class VaccinatorModel {
   final String email;
   final String status; // 'Activo', 'Inactivo'
   final List<String> assignedSectorIds;
+  final String? createdBy;
 
   VaccinatorModel({
     required this.id,
@@ -17,6 +18,7 @@ class VaccinatorModel {
     required this.email,
     required this.status,
     required this.assignedSectorIds,
+    this.createdBy,
   });
 
   // Nombre completo del vacunador
@@ -33,6 +35,7 @@ class VaccinatorModel {
       email: map['email'] ?? '',
       status: map['status'] ?? 'Activo',
       assignedSectorIds: List<String>.from(map['assignedSectorIds'] ?? []),
+      createdBy: map['createdBy'],
     );
   }
 
@@ -46,6 +49,7 @@ class VaccinatorModel {
       'email': email,
       'status': status,
       'assignedSectorIds': assignedSectorIds,
+      'createdBy': createdBy,
     };
   }
 
@@ -59,6 +63,7 @@ class VaccinatorModel {
     String? email,
     String? status,
     List<String>? assignedSectorIds,
+    String? createdBy,
   }) {
     return VaccinatorModel(
       id: id ?? this.id,
@@ -69,6 +74,7 @@ class VaccinatorModel {
       email: email ?? this.email,
       status: status ?? this.status,
       assignedSectorIds: assignedSectorIds ?? this.assignedSectorIds,
+      createdBy: createdBy ?? this.createdBy,
     );
   }
 }

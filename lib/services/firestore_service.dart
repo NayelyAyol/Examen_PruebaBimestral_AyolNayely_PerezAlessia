@@ -83,10 +83,17 @@ class FirestoreService extends ChangeNotifier {
   Future<String> addSector(SectorModel sector) async {
     if (_isFirebaseInitialized) {
       final ref = await _db.collection('sectores').add(sector.toMap());
-      return ref.id;
+      final newId = ref.id;
+      if (sector.assignedCoordinatorId != null) {
+        await _addSectorToCoordinator(sector.assignedCoordinatorId!, newId);
+      }
+      return newId;
     } else {
       final newId = 'sec_${DateTime.now().millisecondsSinceEpoch}';
       _demoSectors.add(sector.copyWith(id: newId));
+      if (sector.assignedCoordinatorId != null) {
+        _addSectorToCoordinatorDemo(sector.assignedCoordinatorId!, newId);
+      }
       notifyListeners();
       return newId;
     }
@@ -94,11 +101,43 @@ class FirestoreService extends ChangeNotifier {
 
   Future<void> updateSector(SectorModel sector) async {
     if (_isFirebaseInitialized) {
+      final oldDoc = await _db.collection('sectores').doc(sector.id).get();
+      final oldSector = oldDoc.exists
+          ? SectorModel.fromMap(oldDoc.data() as Map<String, dynamic>, oldDoc.id)
+          : null;
+
       await _db.collection('sectores').doc(sector.id).update(sector.toMap());
+
+      if (oldSector != null) {
+        final oldCoordId = oldSector.assignedCoordinatorId;
+        final newCoordId = sector.assignedCoordinatorId;
+
+        if (oldCoordId != newCoordId) {
+          if (oldCoordId != null) {
+            await _removeSectorFromCoordinator(oldCoordId, sector.id);
+          }
+          if (newCoordId != null) {
+            await _addSectorToCoordinator(newCoordId, sector.id);
+          }
+        }
+      }
     } else {
       final index = _demoSectors.indexWhere((s) => s.id == sector.id);
       if (index != -1) {
+        final oldSector = _demoSectors[index];
         _demoSectors[index] = sector;
+
+        final oldCoordId = oldSector.assignedCoordinatorId;
+        final newCoordId = sector.assignedCoordinatorId;
+
+        if (oldCoordId != newCoordId) {
+          if (oldCoordId != null) {
+            _removeSectorFromCoordinatorDemo(oldCoordId, sector.id);
+          }
+          if (newCoordId != null) {
+            _addSectorToCoordinatorDemo(newCoordId, sector.id);
+          }
+        }
         notifyListeners();
       }
     }
@@ -106,10 +145,25 @@ class FirestoreService extends ChangeNotifier {
 
   Future<void> deleteSector(String id) async {
     if (_isFirebaseInitialized) {
+      final doc = await _db.collection('sectores').doc(id).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final coordId = data['assignedCoordinatorId'] as String?;
+        if (coordId != null) {
+          await _removeSectorFromCoordinator(coordId, id);
+        }
+      }
       await _db.collection('sectores').doc(id).delete();
     } else {
-      _demoSectors.removeWhere((s) => s.id == id);
-      notifyListeners();
+      final index = _demoSectors.indexWhere((s) => s.id == id);
+      if (index != -1) {
+        final coordId = _demoSectors[index].assignedCoordinatorId;
+        if (coordId != null) {
+          _removeSectorFromCoordinatorDemo(coordId, id);
+        }
+        _demoSectors.removeAt(index);
+        notifyListeners();
+      }
     }
   }
 
@@ -314,6 +368,64 @@ class FirestoreService extends ChangeNotifier {
       }
 
       notifyListeners();
+    }
+  }
+
+  Future<void> _addSectorToCoordinator(String coordinatorId, String sectorId) async {
+    try {
+      final doc = await _db.collection('usuarios').doc(coordinatorId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final assigned = List<String>.from(data['assignedSectorIds'] ?? []);
+        if (!assigned.contains(sectorId)) {
+          assigned.add(sectorId);
+          await _db.collection('usuarios').doc(coordinatorId).update({
+            'assignedSectorIds': assigned,
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error adding sector to coordinator: $e");
+    }
+  }
+
+  Future<void> _removeSectorFromCoordinator(String coordinatorId, String sectorId) async {
+    try {
+      final doc = await _db.collection('usuarios').doc(coordinatorId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final assigned = List<String>.from(data['assignedSectorIds'] ?? []);
+        if (assigned.contains(sectorId)) {
+          assigned.remove(sectorId);
+          await _db.collection('usuarios').doc(coordinatorId).update({
+            'assignedSectorIds': assigned,
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error removing sector from coordinator: $e");
+    }
+  }
+
+  void _addSectorToCoordinatorDemo(String coordinatorId, String sectorId) {
+    final index = _demoCoordinators.indexWhere((c) => c.id == coordinatorId);
+    if (index != -1) {
+      final assigned = List<String>.from(_demoCoordinators[index].assignedSectorIds);
+      if (!assigned.contains(sectorId)) {
+        assigned.add(sectorId);
+        _demoCoordinators[index] = _demoCoordinators[index].copyWith(assignedSectorIds: assigned);
+      }
+    }
+  }
+
+  void _removeSectorFromCoordinatorDemo(String coordinatorId, String sectorId) {
+    final index = _demoCoordinators.indexWhere((c) => c.id == coordinatorId);
+    if (index != -1) {
+      final assigned = List<String>.from(_demoCoordinators[index].assignedSectorIds);
+      if (assigned.contains(sectorId)) {
+        assigned.remove(sectorId);
+        _demoCoordinators[index] = _demoCoordinators[index].copyWith(assignedSectorIds: assigned);
+      }
     }
   }
 }

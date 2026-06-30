@@ -39,261 +39,276 @@ class _SectorsListViewState extends State<SectorsListView> {
       ),
       body: Container(
         decoration: VetTheme.backgroundGradient,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 10,
-              ),
-              child: GlassCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Column(
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.filter_alt_outlined,
-                          color: VetTheme.primary,
-                          size: 20,
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 760;
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isWide ? 800 : double.infinity,
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
                         ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Filtros de Búsqueda',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: VetTheme.textDark,
-                            fontSize: 14,
+                        child: GlassCard(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    DropdownButtonFormField<String>(
-                      value: _selectedZone,
-                      decoration: const InputDecoration(
-                        labelText: 'Zona',
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                      items: _zones.map((zone) {
-                        return DropdownMenuItem(
-                          value: zone,
-                          child: Text(zone),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _selectedZone = value);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            Expanded(
-              child: StreamBuilder<List<SectorModel>>(
-                stream: firestoreService.getSectorsStream(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: VetTheme.primary,
-                      ),
-                    );
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text('Error al cargar datos: ${snapshot.error}'),
-                    );
-                  }
-
-                  var sectors = snapshot.data ?? [];
-
-                  if (_selectedZone != 'Todos') {
-                    sectors = sectors
-                        .where((s) => s.zone == _selectedZone)
-                        .toList();
-                  }
-
-                  if (sectors.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.map_outlined,
-                            size: 64,
-                            color: VetTheme.textLight.withOpacity(0.5),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No se encontraron sectores con estos filtros.',
-                            style: TextStyle(
-                              color: VetTheme.textLight,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      bottom: 80,
-                      top: 10,
-                    ),
-                    itemCount: sectors.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
-                    itemBuilder: (context, index) {
-                      final sector = sectors[index];
-
-                      return GlassCard(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              sector.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: VetTheme.textDark,
-                                fontSize: 18,
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            Wrap(
-                              spacing: 16,
-                              runSpacing: 8,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.location_on_outlined,
-                                      size: 16,
-                                      color: VetTheme.primary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Zona: ${sector.zone}',
-                                      style: const TextStyle(
-                                        color: VetTheme.textLight,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.person_outline,
-                                      size: 16,
-                                      color: VetTheme.primary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Coord: ${sector.assignedCoordinatorName ?? "Ninguno"}',
-                                      style: const TextStyle(
-                                        color: VetTheme.textLight,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            Text(
-                              sector.description,
-                              style: const TextStyle(
-                                color: VetTheme.textLight,
-                                fontSize: 14,
-                                height: 1.4,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-
-                            const Divider(
-                              height: 24,
-                              thickness: 1,
-                              color: VetTheme.glassBorder,
-                            ),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                TextButton.icon(
-                                  icon: const Icon(
-                                    Icons.edit,
+                          child: Column(
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(
+                                    Icons.filter_alt_outlined,
                                     color: VetTheme.primary,
-                                    size: 18,
+                                    size: 20,
                                   ),
-                                  label: const Text(
-                                    'Editar',
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Filtros de Búsqueda',
                                     style: TextStyle(
-                                      color: VetTheme.primary,
                                       fontWeight: FontWeight.bold,
+                                      color: VetTheme.textDark,
+                                      fontSize: 14,
                                     ),
                                   ),
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/sector_form',
-                                      arguments: sector,
-                                    );
-                                  },
-                                ),
-                                const SizedBox(width: 12),
-                                TextButton.icon(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: VetTheme.accent,
-                                    size: 18,
-                                  ),
-                                  label: const Text(
-                                    'Eliminar',
-                                    style: TextStyle(
-                                      color: VetTheme.accent,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  onPressed: () => _confirmDelete(
-                                    context,
-                                    firestoreService,
-                                    sector,
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              DropdownButtonFormField<String>(
+                                value: _selectedZone,
+                                decoration: const InputDecoration(
+                                  labelText: 'Zona',
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
+                                items: _zones.map((zone) {
+                                  return DropdownMenuItem(
+                                    value: zone,
+                                    child: Text(zone),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() => _selectedZone = value);
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+                      ),
+
+                      Expanded(
+                        child: StreamBuilder<List<SectorModel>>(
+                          stream: firestoreService.getSectorsStream(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: VetTheme.primary,
+                                ),
+                              );
+                            }
+
+                            if (snapshot.hasError) {
+                              return Center(
+                                child: Text('Error al cargar datos: ${snapshot.error}'),
+                              );
+                            }
+
+                            var sectors = snapshot.data ?? [];
+
+                            if (_selectedZone != 'Todos') {
+                              sectors = sectors
+                                  .where((s) => s.zone == _selectedZone)
+                                  .toList();
+                            }
+
+                            if (sectors.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.map_outlined,
+                                      size: 64,
+                                      color: VetTheme.textLight.withOpacity(0.5),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'No se encontraron sectores con estos filtros.',
+                                      style: TextStyle(
+                                        color: VetTheme.textLight,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return ListView.separated(
+                              padding: const EdgeInsets.only(
+                                left: 20,
+                                right: 20,
+                                bottom: 80,
+                                top: 10,
+                              ),
+                              itemCount: sectors.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 16),
+                              itemBuilder: (context, index) {
+                                final sector = sectors[index];
+
+                                return GlassCard(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        sector.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: VetTheme.textDark,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 8),
+
+                                      Wrap(
+                                        spacing: 16,
+                                        runSpacing: 8,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.location_on_outlined,
+                                                size: 16,
+                                                color: VetTheme.primary,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Zona: ${sector.zone}',
+                                                style: const TextStyle(
+                                                  color: VetTheme.textLight,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.person_outline,
+                                                size: 16,
+                                                color: VetTheme.primary,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Coord: ${sector.assignedCoordinatorName ?? "Ninguno"}',
+                                                style: const TextStyle(
+                                                  color: VetTheme.textLight,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 10),
+
+                                      Text(
+                                        sector.description,
+                                        style: const TextStyle(
+                                          color: VetTheme.textLight,
+                                          fontSize: 14,
+                                          height: 1.4,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+
+                                      const Divider(
+                                        height: 24,
+                                        thickness: 1,
+                                        color: VetTheme.glassBorder,
+                                      ),
+
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          TextButton.icon(
+                                            icon: const Icon(
+                                              Icons.edit,
+                                              color: VetTheme.primary,
+                                              size: 18,
+                                            ),
+                                            label: const Text(
+                                              'Editar',
+                                              style: TextStyle(
+                                                color: VetTheme.primary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.pushNamed(
+                                                context,
+                                                '/sector_form',
+                                                arguments: sector,
+                                              );
+                                            },
+                                          ),
+                                          const SizedBox(width: 12),
+                                          TextButton.icon(
+                                            icon: const Icon(
+                                              Icons.delete_outline,
+                                              color: VetTheme.accent,
+                                              size: 18,
+                                            ),
+                                            label: const Text(
+                                              'Eliminar',
+                                              style: TextStyle(
+                                                color: VetTheme.accent,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            onPressed: () => _confirmDelete(
+                                              context,
+                                              firestoreService,
+                                              sector,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

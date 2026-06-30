@@ -159,8 +159,6 @@ class AuthService extends ChangeNotifier {
   }
 
   // Crear usuario para un Coordinador de Brigada (Exclusivo Administrador)
-  // Como Firebase Auth inicia sesión automáticamente al crear usuario, usamos un truco:
-  // Guardamos las credenciales del admin actual en memoria, creamos el coordinador, y re-iniciamos sesión como admin.
   Future<String> createBrigadeCoordinatorUser({
     required String email,
     required String cedula,
@@ -265,6 +263,7 @@ class AuthService extends ChangeNotifier {
         'isFirstLogin': true,
         'status': 'Activo',
         'assignedSectorIds': [],
+        'createdBy': currentUser?.uid,
       });
 
       return uid;
@@ -278,6 +277,7 @@ class AuthService extends ChangeNotifier {
         'role': 'vacunador',
         'isFirstLogin': true,
         'password': 'Ecuador2026',
+        'createdBy': currentUser?.uid,
       };
 
       return uid;

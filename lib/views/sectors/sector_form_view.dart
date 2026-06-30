@@ -76,25 +76,9 @@ class _SectorFormViewState extends State<SectorFormView> {
       );
 
       if (widget.sectorToEdit == null) {
-        final newId = await firestoreService.addSector(sector);
-
-        if (_selectedCoordinatorId != null) {
-          await firestoreService.syncSectorAssignments(
-            _selectedCoordinatorId!,
-            _selectedCoordinatorName ?? '',
-            [newId],
-          );
-        }
+        await firestoreService.addSector(sector);
       } else {
         await firestoreService.updateSector(sector);
-
-        if (_selectedCoordinatorId != null) {
-          await firestoreService.syncSectorAssignments(
-            _selectedCoordinatorId!,
-            _selectedCoordinatorName ?? '',
-            [sector.id],
-          );
-        }
       }
 
       if (!mounted) return;
