@@ -395,9 +395,10 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
           ),
         ),
       ),
-    ),
-  ),
+    );
+  },
 ),
+      ),
     );
   }
 }

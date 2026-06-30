@@ -103,6 +103,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
         context,
         listen: false,
       );
+      final currentUser = authService.currentUser;
 
       String uid;
 
@@ -127,6 +128,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
         email: _emailController.text.trim(),
         status: 'Activo',
         assignedSectorIds: _assignedSectorIds,
+        createdBy: isEditing ? widget.vaccinatorToEdit?.createdBy : currentUser?.uid,
       );
 
       if (isEditing) {
