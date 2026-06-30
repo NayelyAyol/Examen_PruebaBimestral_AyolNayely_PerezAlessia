@@ -20,6 +20,7 @@ class VaccinationModel {
   final String vacunadorNombre;
   final String sectorId;
   final String sectorNombre;
+  final bool isPendingSync;
 
   VaccinationModel({
     required this.id,
@@ -40,6 +41,7 @@ class VaccinationModel {
     this.vacunadorNombre = '',
     this.sectorId = '',
     this.sectorNombre = '',
+    this.isPendingSync = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -66,7 +68,7 @@ class VaccinationModel {
     };
   }
 
-  factory VaccinationModel.fromFirestore(String id, Map<String, dynamic> map) {
+  factory VaccinationModel.fromFirestore(String id, Map<String, dynamic> map, {bool isPendingSync = false}) {
     return VaccinationModel(
       id: id,
       nombrePropietario: map['nombrePropietario'] ?? '',
@@ -88,6 +90,51 @@ class VaccinationModel {
 
       sectorId: map['sectorId'] ?? '',
       sectorNombre: map['sectorNombre'] ?? '',
+      isPendingSync: isPendingSync,
+    );
+  }
+
+  VaccinationModel copyWith({
+    String? id,
+    String? nombrePropietario,
+    String? cedulaPropietario,
+    String? telefono,
+    String? tipoMascota,
+    String? nombreMascota,
+    String? edadAproximada,
+    String? sexo,
+    String? vacunaAplicada,
+    String? observaciones,
+    String? fotografia,
+    double? latitud,
+    double? longitud,
+    DateTime? fechaHora,
+    String? vacunadorId,
+    String? vacunadorNombre,
+    String? sectorId,
+    String? sectorNombre,
+    bool? isPendingSync,
+  }) {
+    return VaccinationModel(
+      id: id ?? this.id,
+      nombrePropietario: nombrePropietario ?? this.nombrePropietario,
+      cedulaPropietario: cedulaPropietario ?? this.cedulaPropietario,
+      telefono: telefono ?? this.telefono,
+      tipoMascota: tipoMascota ?? this.tipoMascota,
+      nombreMascota: nombreMascota ?? this.nombreMascota,
+      edadAproximada: edadAproximada ?? this.edadAproximada,
+      sexo: sexo ?? this.sexo,
+      vacunaAplicada: vacunaAplicada ?? this.vacunaAplicada,
+      observaciones: observaciones ?? this.observaciones,
+      fotografia: fotografia ?? this.fotografia,
+      latitud: latitud ?? this.latitud,
+      longitud: longitud ?? this.longitud,
+      fechaHora: fechaHora ?? this.fechaHora,
+      vacunadorId: vacunadorId ?? this.vacunadorId,
+      vacunadorNombre: vacunadorNombre ?? this.vacunadorNombre,
+      sectorId: sectorId ?? this.sectorId,
+      sectorNombre: sectorNombre ?? this.sectorNombre,
+      isPendingSync: isPendingSync ?? this.isPendingSync,
     );
   }
 }

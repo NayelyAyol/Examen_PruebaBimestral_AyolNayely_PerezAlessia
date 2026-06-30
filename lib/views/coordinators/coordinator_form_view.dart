@@ -9,6 +9,7 @@ import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/custom_button.dart';
+import '../../utils/connectivity_helper.dart';
 
 class CoordinatorFormView extends StatefulWidget {
   final CoordinatorModel? coordinatorToEdit;
@@ -102,6 +103,8 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
         assignedSectorIds: _assignedSectorIds,
       );
 
+      final hasInternet = await checkInternetConnection();
+
       if (widget.coordinatorToEdit == null) {
         await firestoreService.saveCoordinatorProfile(uid, coordinator);
       } else {
@@ -110,13 +113,21 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
 
       if (!mounted) return;
 
+      String msg;
+      final authService = Provider.of<AuthService>(context, listen: false);
+      if (authService.isFirebaseInitialized) {
+        msg = hasInternet
+            ? (widget.coordinatorToEdit == null
+                ? 'Coordinador creado con contraseña Ecuador2026'
+                : 'Coordinador actualizado correctamente')
+            : 'Listo, cambios guardados en local. Cuando tengas conexión a internet se actualizará la respectiva información en la BD.';
+      } else {
+        msg = 'Cambios guardados en local (Modo Demo).';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            widget.coordinatorToEdit == null
-                ? 'Coordinador creado con contraseña Ecuador2026'
-                : 'Coordinador actualizado correctamente',
-          ),
+          content: Text(msg),
           backgroundColor: Colors.green,
         ),
       );

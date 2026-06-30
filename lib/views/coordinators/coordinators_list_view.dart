@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../services/firestore_service.dart';
+
 import '../../models/coordinator_model.dart';
 import '../../models/sector_model.dart';
+import '../../services/firestore_service.dart';
+import '../../services/auth_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../utils/connectivity_helper.dart';
 
 class CoordinatorsListView extends StatelessWidget {
   const CoordinatorsListView({super.key});
@@ -232,12 +235,23 @@ class CoordinatorsListView extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
+                final hasInternet = await checkInternetConnection();
                 await firestoreService.deleteCoordinator(coordinator.id);
                 if (context.mounted) {
+                  String msg;
+                  final authService = Provider.of<AuthService>(context, listen: false);
+                  if (authService.isFirebaseInitialized) {
+                    msg = hasInternet
+                        ? 'Coordinador "${coordinator.nombreCompleto}" eliminado correctamente.'
+                        : 'Listo, cambios guardados en local. Cuando tengas conexión a internet se actualizará la respectiva información en la BD.';
+                  } else {
+                    msg = 'Cambios guardados en local (Modo Demo).';
+                  }
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Coordinador "${coordinator.nombreCompleto}" eliminado correctamente.'),
-                      backgroundColor: VetTheme.accent,
+                      content: Text(msg),
+                      backgroundColor: hasInternet ? VetTheme.accent : Colors.green,
                     ),
                   );
                 }

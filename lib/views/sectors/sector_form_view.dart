@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import '../../models/coordinator_model.dart';
 import '../../models/sector_model.dart';
 import '../../services/firestore_service.dart';
+import '../../services/auth_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/glass_card.dart';
+import '../../utils/connectivity_helper.dart';
 
 class SectorFormView extends StatefulWidget {
   final SectorModel? sectorToEdit;
@@ -75,6 +77,8 @@ class _SectorFormViewState extends State<SectorFormView> {
         assignedCoordinatorName: _selectedCoordinatorName,
       );
 
+      final hasInternet = await checkInternetConnection();
+
       if (widget.sectorToEdit == null) {
         await firestoreService.addSector(sector);
       } else {
@@ -83,13 +87,19 @@ class _SectorFormViewState extends State<SectorFormView> {
 
       if (!mounted) return;
 
+      String msg;
+      final authService = Provider.of<AuthService>(context, listen: false);
+      if (authService.isFirebaseInitialized) {
+        msg = hasInternet
+            ? (widget.sectorToEdit == null ? 'Sector creado exitosamente' : 'Sector actualizado exitosamente')
+            : 'Listo, cambios guardados en local. Cuando tengas conexión a internet se actualizará la respectiva información en la BD.';
+      } else {
+        msg = 'Cambios guardados en local (Modo Demo).';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            widget.sectorToEdit == null
-                ? 'Sector creado exitosamente'
-                : 'Sector actualizado exitosamente',
-          ),
+          content: Text(msg),
           backgroundColor: Colors.green,
         ),
       );

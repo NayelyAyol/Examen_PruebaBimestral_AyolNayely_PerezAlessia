@@ -60,7 +60,11 @@ class VaccinatorService extends ChangeNotifier {
       }
       return query.snapshots().map((snapshot) {
         return snapshot.docs.map((doc) {
-          return VaccinatorModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          return VaccinatorModel.fromMap(
+            doc.data() as Map<String, dynamic>,
+            doc.id,
+            isPendingSync: doc.metadata.hasPendingWrites,
+          );
         }).toList();
       });
     } else {
@@ -81,7 +85,11 @@ class VaccinatorService extends ChangeNotifier {
           .snapshots()
           .map((snapshot) {
         return snapshot.docs.map((doc) {
-          return VaccinatorModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          return VaccinatorModel.fromMap(
+            doc.data() as Map<String, dynamic>,
+            doc.id,
+            isPendingSync: doc.metadata.hasPendingWrites,
+          );
         }).toList();
       });
     } else {

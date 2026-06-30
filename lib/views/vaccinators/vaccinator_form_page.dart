@@ -11,6 +11,7 @@ import '../../theme/vet_theme.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/glass_card.dart';
+import '../../utils/connectivity_helper.dart';
 
 class VaccinatorFormPage extends StatefulWidget {
   final VaccinatorModel? vaccinatorToEdit;
@@ -131,6 +132,8 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
         createdBy: isEditing ? widget.vaccinatorToEdit?.createdBy : currentUser?.uid,
       );
 
+      final hasInternet = await checkInternetConnection();
+
       if (isEditing) {
         await _vaccinatorService.updateVaccinator(vaccinator);
       } else {
@@ -144,13 +147,20 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
 
       if (!mounted) return;
 
+      String msg;
+      if (authService.isFirebaseInitialized) {
+        msg = hasInternet
+            ? (isEditing
+                ? 'Vacunador actualizado correctamente'
+                : 'Vacunador creado con contraseña Ecuador2026')
+            : 'Listo, cambios guardados en local. Cuando tengas conexión a internet se actualizará la respectiva información en la BD.';
+      } else {
+        msg = 'Cambios guardados en local (Modo Demo).';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            isEditing
-                ? 'Vacunador actualizado correctamente'
-                : 'Vacunador creado con contraseña Ecuador2026',
-          ),
+          content: Text(msg),
           backgroundColor: Colors.green,
         ),
       );

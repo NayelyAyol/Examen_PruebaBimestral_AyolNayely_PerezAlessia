@@ -72,7 +72,11 @@ class FirestoreService extends ChangeNotifier {
     if (_isFirebaseInitialized) {
       return _db.collection('sectores').snapshots().map((snapshot) {
         return snapshot.docs.map((doc) {
-          return SectorModel.fromMap(doc.data(), doc.id);
+          return SectorModel.fromMap(
+            doc.data(),
+            doc.id,
+            isPendingSync: doc.metadata.hasPendingWrites,
+          );
         }).toList();
       });
     } else {
@@ -174,10 +178,14 @@ class FirestoreService extends ChangeNotifier {
           .where('rol', isEqualTo: 'coordinador_brigada')
           .snapshots()
           .map((snapshot) {
-            return snapshot.docs.map((doc) {
-              return CoordinatorModel.fromMap(doc.data(), doc.id);
-            }).toList();
-          });
+        return snapshot.docs.map((doc) {
+          return CoordinatorModel.fromMap(
+            doc.data(),
+            doc.id,
+            isPendingSync: doc.metadata.hasPendingWrites,
+          );
+        }).toList();
+      });
     } else {
       return Stream.value(_demoCoordinators);
     }

@@ -7,6 +7,7 @@ class CoordinatorModel {
   final String email;
   final String status; // 'Activo', 'Inactivo'
   final List<String> assignedSectorIds;
+  final bool isPendingSync;
 
   CoordinatorModel({
     required this.id,
@@ -17,13 +18,14 @@ class CoordinatorModel {
     required this.email,
     required this.status,
     required this.assignedSectorIds,
+    this.isPendingSync = false,
   });
 
   // Nombre completo combinado
   String get nombreCompleto => '$nombres $apellidos';
 
   // Convierte Firestore a CoordinatorModel
-  factory CoordinatorModel.fromMap(Map<String, dynamic> map, String id) {
+  factory CoordinatorModel.fromMap(Map<String, dynamic> map, String id, {bool isPendingSync = false}) {
     return CoordinatorModel(
       id: id,
       cedula: map['cedula'] ?? '',
@@ -33,6 +35,7 @@ class CoordinatorModel {
       email: map['email'] ?? '',
       status: map['status'] ?? 'Activo',
       assignedSectorIds: List<String>.from(map['assignedSectorIds'] ?? []),
+      isPendingSync: isPendingSync,
     );
   }
 
@@ -58,6 +61,7 @@ class CoordinatorModel {
     String? email,
     String? status,
     List<String>? assignedSectorIds,
+    bool? isPendingSync,
   }) {
     return CoordinatorModel(
       id: id ?? this.id,
@@ -68,6 +72,7 @@ class CoordinatorModel {
       email: email ?? this.email,
       status: status ?? this.status,
       assignedSectorIds: assignedSectorIds ?? this.assignedSectorIds,
+      isPendingSync: isPendingSync ?? this.isPendingSync,
     );
   }
 }

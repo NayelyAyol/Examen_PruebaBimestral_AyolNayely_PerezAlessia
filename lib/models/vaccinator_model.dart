@@ -8,6 +8,7 @@ class VaccinatorModel {
   final String status; // 'Activo', 'Inactivo'
   final List<String> assignedSectorIds;
   final String? createdBy;
+  final bool isPendingSync;
 
   VaccinatorModel({
     required this.id,
@@ -19,13 +20,14 @@ class VaccinatorModel {
     required this.status,
     required this.assignedSectorIds,
     this.createdBy,
+    this.isPendingSync = false,
   });
 
   // Nombre completo del vacunador
   String get nombreCompleto => '$nombres $apellidos';
 
   // Convierte Firestore a VaccinatorModel
-  factory VaccinatorModel.fromMap(Map<String, dynamic> map, String id) {
+  factory VaccinatorModel.fromMap(Map<String, dynamic> map, String id, {bool isPendingSync = false}) {
     return VaccinatorModel(
       id: id,
       cedula: map['cedula'] ?? '',
@@ -36,6 +38,7 @@ class VaccinatorModel {
       status: map['status'] ?? 'Activo',
       assignedSectorIds: List<String>.from(map['assignedSectorIds'] ?? []),
       createdBy: map['createdBy'],
+      isPendingSync: isPendingSync,
     );
   }
 
@@ -64,6 +67,7 @@ class VaccinatorModel {
     String? status,
     List<String>? assignedSectorIds,
     String? createdBy,
+    bool? isPendingSync,
   }) {
     return VaccinatorModel(
       id: id ?? this.id,
@@ -75,6 +79,7 @@ class VaccinatorModel {
       status: status ?? this.status,
       assignedSectorIds: assignedSectorIds ?? this.assignedSectorIds,
       createdBy: createdBy ?? this.createdBy,
+      isPendingSync: isPendingSync ?? this.isPendingSync,
     );
   }
-}
+}

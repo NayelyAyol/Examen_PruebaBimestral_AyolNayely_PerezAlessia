@@ -7,6 +7,7 @@ import '../../services/vaccinator_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
 import 'vaccinator_form_page.dart';
+import '../../utils/connectivity_helper.dart';
 
 class VaccinatorsPage extends StatefulWidget {
   const VaccinatorsPage({super.key});
@@ -82,13 +83,24 @@ class _VaccinatorsPageState extends State<VaccinatorsPage> {
     if (confirm != true) return;
 
     try {
+      final hasInternet = await checkInternetConnection();
+      final authService = Provider.of<AuthService>(context, listen: false);
       await _vaccinatorService.deleteVaccinator(vaccinator.id);
 
       if (!mounted) return;
 
+      String msg;
+      if (authService.isFirebaseInitialized) {
+        msg = hasInternet
+            ? 'Vacunador eliminado correctamente'
+            : 'Listo, cambios guardados en local. Cuando tengas conexión a internet se actualizará la respectiva información en la BD.';
+      } else {
+        msg = 'Cambios guardados en local (Modo Demo).';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vacunador eliminado correctamente'),
+        SnackBar(
+          content: Text(msg),
           backgroundColor: Colors.green,
         ),
       );

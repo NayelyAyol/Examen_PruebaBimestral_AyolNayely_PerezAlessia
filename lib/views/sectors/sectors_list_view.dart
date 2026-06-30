@@ -5,6 +5,7 @@ import '../../models/sector_model.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../utils/connectivity_helper.dart';
 
 class SectorsListView extends StatefulWidget {
   const SectorsListView({super.key});
@@ -344,15 +345,24 @@ class _SectorsListViewState extends State<SectorsListView> {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
+                final hasInternet = await checkInternetConnection();
                 await firestoreService.deleteSector(sector.id);
 
                 if (context.mounted) {
+                  String msg;
+                  final authService = Provider.of<AuthService>(context, listen: false);
+                  if (authService.isFirebaseInitialized) {
+                    msg = hasInternet
+                        ? 'Sector "${sector.name}" eliminado correctamente.'
+                        : 'Listo, cambios guardados en local. Cuando tengas conexión a internet se actualizará la respectiva información en la BD.';
+                  } else {
+                    msg = 'Cambios guardados en local (Modo Demo).';
+                  }
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        'Sector "${sector.name}" eliminado correctamente.',
-                      ),
-                      backgroundColor: VetTheme.accent,
+                      content: Text(msg),
+                      backgroundColor: hasInternet ? VetTheme.accent : Colors.green,
                     ),
                   );
                 }

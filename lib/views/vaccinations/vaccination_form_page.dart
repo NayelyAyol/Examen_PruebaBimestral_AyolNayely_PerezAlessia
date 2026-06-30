@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:gal/gal.dart';
 
 import '../../models/vaccination_model.dart';
+import '../../utils/connectivity_helper.dart';
 import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/vaccination_service.dart';
@@ -337,6 +338,8 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
         sectorNombre: _currentSectorNombre,
       );
 
+      final hasInternet = await checkInternetConnection();
+
       if (isEditing) {
         await _vaccinationService.updateVaccination(vaccination);
       } else {
@@ -344,6 +347,25 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
       }
 
       if (!mounted) return;
+
+      String msg;
+      if (authService.isFirebaseInitialized) {
+        msg = hasInternet
+            ? (isEditing
+                ? 'Vacunación actualizada correctamente'
+                : 'Vacunación registrada exitosamente')
+            : 'Listo, cambios guardados en local. Cuando tengas conexión a internet se actualizará la respectiva información en la BD.';
+      } else {
+        msg = 'Cambios guardados en local (Modo Demo).';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.green,
+        ),
+      );
+
       Navigator.pop(context);
     } catch (e) {
       _showSnack('Error al guardar vacunación: $e');

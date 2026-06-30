@@ -6,6 +6,7 @@ class SectorModel {
   final String? assignedCoordinatorId;
   final String? assignedCoordinatorName;
   final List<String> assignedVaccinatorIds;
+  final bool isPendingSync;
 
   SectorModel({
     required this.id,
@@ -15,9 +16,10 @@ class SectorModel {
     this.assignedCoordinatorId,
     this.assignedCoordinatorName,
     this.assignedVaccinatorIds = const [],
+    this.isPendingSync = false,
   });
 
-  factory SectorModel.fromMap(Map<String, dynamic> map, String id) {
+  factory SectorModel.fromMap(Map<String, dynamic> map, String id, {bool isPendingSync = false}) {
     return SectorModel(
       id: id,
       name: map['name'] ?? '',
@@ -27,6 +29,7 @@ class SectorModel {
       assignedCoordinatorName: map['assignedCoordinatorName'],
       assignedVaccinatorIds:
           List<String>.from(map['assignedVaccinatorIds'] ?? []),
+      isPendingSync: isPendingSync,
     );
   }
 
@@ -49,6 +52,7 @@ class SectorModel {
     String? assignedCoordinatorId,
     String? assignedCoordinatorName,
     List<String>? assignedVaccinatorIds,
+    bool? isPendingSync,
   }) {
     return SectorModel(
       id: id ?? this.id,
@@ -61,6 +65,7 @@ class SectorModel {
           assignedCoordinatorName ?? this.assignedCoordinatorName,
       assignedVaccinatorIds:
           assignedVaccinatorIds ?? this.assignedVaccinatorIds,
+      isPendingSync: isPendingSync ?? this.isPendingSync,
     );
   }
 }

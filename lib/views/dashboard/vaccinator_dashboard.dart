@@ -20,7 +20,7 @@ class VaccinatorDashboard extends StatelessWidget {
       context,
       listen: false,
     );
-    final vaccinationService = VaccinationService();
+    final vaccinationService = Provider.of<VaccinationService>(context);
     final user = authService.currentUser;
 
     return Scaffold(
@@ -61,11 +61,20 @@ class VaccinatorDashboard extends StatelessWidget {
                   return mySectorIds.contains(v.sectorId);
                 }).toList();
 
-                final totalDogs = myVaccinations
+                // Sincronización pendientes
+                final pendingSectors = mySectors.where((s) => s.isPendingSync).length;
+                final pendingVaccinations = myVaccinations.where((v) => v.isPendingSync).length;
+                final pendingSyncCount = pendingSectors + pendingVaccinations;
+
+                // Filtrar métricas principales solo para sincronizados
+                final syncedSectors = mySectors.where((s) => !s.isPendingSync).toList();
+                final syncedVaccinations = myVaccinations.where((v) => !v.isPendingSync).toList();
+
+                final totalDogs = syncedVaccinations
                     .where((v) => v.tipoMascota.toLowerCase() == 'perro')
                     .length;
 
-                final totalCats = myVaccinations
+                final totalCats = syncedVaccinations
                     .where((v) => v.tipoMascota.toLowerCase() == 'gato')
                     .length;
 
@@ -131,6 +140,10 @@ class VaccinatorDashboard extends StatelessWidget {
 
                         const SizedBox(height: 18),
 
+                        _buildSyncStatusBanner(pendingSyncCount, isMobile),
+
+                        const SizedBox(height: 18),
+
                         if (isLoading)
                           const Center(
                             child: Padding(
@@ -147,13 +160,13 @@ class VaccinatorDashboard extends StatelessWidget {
                             children: [
                               _MetricCard(
                                 title: 'Sectores',
-                                value: mySectors.length.toString(),
+                                value: syncedSectors.length.toString(),
                                 icon: Icons.map_outlined,
                                 color: VetTheme.primary,
                               ),
                               _MetricCard(
                                 title: 'Vacunaciones',
-                                value: myVaccinations.length.toString(),
+                                value: syncedVaccinations.length.toString(),
                                 icon: Icons.assignment_turned_in_outlined,
                                 color: Colors.green,
                               ),
@@ -186,27 +199,13 @@ class VaccinatorDashboard extends StatelessWidget {
                         const SizedBox(height: 12),
 
                         if (mySectors.isEmpty)
-                          GlassCard(
+                          const GlassCard(
                             width: double.infinity,
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.assignment_late_outlined,
-                                    size: 48,
-                                    color: VetTheme.textLight.withOpacity(0.5),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'No tienes sectores asignados en este momento.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: VetTheme.textLight,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ],
+                            padding: EdgeInsets.all(24),
+                            child: Center(
+                              child: Text(
+                                'No tienes sectores asignados.',
+                                style: TextStyle(color: VetTheme.textLight),
                               ),
                             ),
                           )
@@ -257,6 +256,76 @@ class VaccinatorDashboard extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildSyncStatusBanner(int pendingCount, bool isMobile) {
+    final bool hasPending = pendingCount > 0;
+    return GlassCard(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: (hasPending ? Colors.orange : Colors.green).withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              hasPending ? Icons.sync_problem_outlined : Icons.cloud_done_outlined,
+              color: hasPending ? Colors.orange : Colors.green,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasPending ? 'Sincronización Pendiente' : 'Sincronizado con la nube',
+                  style: const TextStyle(
+                    color: VetTheme.textDark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hasPending
+                      ? 'Tienes $pendingCount registro(s) guardado(s) en local que se sincronizarán al detectar internet.'
+                      : 'Todos tus registros locales están sincronizados con la base de datos.',
+                  style: const TextStyle(
+                    color: VetTheme.textLight,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (hasPending) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Text(
+                '$pendingCount pnd.',
+                style: const TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

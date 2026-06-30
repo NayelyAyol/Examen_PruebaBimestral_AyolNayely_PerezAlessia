@@ -235,6 +235,7 @@ class VaccinationService extends ChangeNotifier {
       return VaccinationModel.fromFirestore(
         doc.id,
         doc.data() as Map<String, dynamic>,
+        isPendingSync: doc.metadata.hasPendingWrites,
       );
     }).toList();
 
