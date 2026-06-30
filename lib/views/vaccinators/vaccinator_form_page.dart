@@ -31,7 +31,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
   late TextEditingController _telefonoController;
   late TextEditingController _emailController;
 
-  final VaccinatorService _vaccinatorService = VaccinatorService();
+  late final VaccinatorService _vaccinatorService;
 
   List<String> _assignedSectorIds = [];
   bool _isLoading = false;
@@ -41,6 +41,7 @@ class _VaccinatorFormPageState extends State<VaccinatorFormPage> {
   @override
   void initState() {
     super.initState();
+    _vaccinatorService = Provider.of<VaccinatorService>(context, listen: false);
 
     _cedulaController = TextEditingController(
       text: widget.vaccinatorToEdit?.cedula ?? '',

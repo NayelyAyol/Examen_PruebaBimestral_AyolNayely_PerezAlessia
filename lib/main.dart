@@ -15,6 +15,8 @@ import 'models/vaccination_model.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
 import 'services/seed_service.dart';
+import 'services/vaccination_service.dart';
+import 'services/vaccinator_service.dart';
 
 // Importación de Tema
 import 'theme/vet_theme.dart';
@@ -69,6 +71,8 @@ void main() async {
 
   final authService = AuthService(isFirebaseInitialized);
   final firestoreService = FirestoreService(isFirebaseInitialized);
+  final vaccinationService = VaccinationService();
+  final vaccinatorService = VaccinatorService();
 
   await SeedService.checkAndSeed(firestoreService);
 
@@ -77,6 +81,8 @@ void main() async {
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: authService),
         ChangeNotifierProvider<FirestoreService>.value(value: firestoreService),
+        ChangeNotifierProvider<VaccinationService>.value(value: vaccinationService),
+        ChangeNotifierProvider<VaccinatorService>.value(value: vaccinatorService),
       ],
       child: const MyApp(),
     ),

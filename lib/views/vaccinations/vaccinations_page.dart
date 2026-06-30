@@ -35,9 +35,15 @@ class VaccinationsPage extends StatefulWidget {
 }
 
 class _VaccinationsPageState extends State<VaccinationsPage> {
-  final VaccinationService _vaccinationService = VaccinationService();
+  late final VaccinationService _vaccinationService;
 
   String? _selectedSectorName;
+
+  @override
+  void initState() {
+    super.initState();
+    _vaccinationService = Provider.of<VaccinationService>(context, listen: false);
+  }
 
   Widget _buildPhoto(String photoPath) {
     if (photoPath.isEmpty) return const SizedBox.shrink();

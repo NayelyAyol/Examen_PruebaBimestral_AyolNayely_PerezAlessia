@@ -17,10 +17,16 @@ class VaccinatorsPage extends StatefulWidget {
 }
 
 class _VaccinatorsPageState extends State<VaccinatorsPage> {
-  final VaccinatorService _vaccinatorService = VaccinatorService();
+  late final VaccinatorService _vaccinatorService;
   final TextEditingController _searchController = TextEditingController();
 
   String _searchText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _vaccinatorService = Provider.of<VaccinatorService>(context, listen: false);
+  }
 
   @override
   void dispose() {

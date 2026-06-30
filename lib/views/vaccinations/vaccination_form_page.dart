@@ -37,7 +37,7 @@ class VaccinationFormPage extends StatefulWidget {
 
 class _VaccinationFormPageState extends State<VaccinationFormPage> {
   final _formKey = GlobalKey<FormState>();
-  final VaccinationService _vaccinationService = VaccinationService();
+  late final VaccinationService _vaccinationService;
   final StorageService _storageService = StorageService();
   final ImagePicker _picker = ImagePicker();
 
@@ -74,6 +74,7 @@ class _VaccinationFormPageState extends State<VaccinationFormPage> {
   @override
   void initState() {
     super.initState();
+    _vaccinationService = Provider.of<VaccinationService>(context, listen: false);
 
     if (isEditing) {
       final vac = widget.vaccinationToEdit!;
