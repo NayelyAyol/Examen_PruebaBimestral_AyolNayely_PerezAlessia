@@ -114,7 +114,6 @@ class _CoordinatorFormViewState extends State<CoordinatorFormView> {
       if (!mounted) return;
 
       String msg;
-      final authService = Provider.of<AuthService>(context, listen: false);
       if (authService.isFirebaseInitialized) {
         msg = hasInternet
             ? (widget.coordinatorToEdit == null

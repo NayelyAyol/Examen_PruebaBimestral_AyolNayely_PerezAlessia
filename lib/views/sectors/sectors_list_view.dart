@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/sector_model.dart';
 import '../../services/firestore_service.dart';
+import '../../services/auth_service.dart';
 import '../../theme/vet_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../utils/connectivity_helper.dart';
