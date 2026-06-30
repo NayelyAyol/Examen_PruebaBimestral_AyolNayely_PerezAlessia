@@ -265,6 +265,7 @@ class _LoginViewState extends State<LoginView> {
 
               const SizedBox(height: 24),
 
+            if (!context.read<AuthService>().isFirebaseInitialized)
               Text(
                 'Modo Demo Credenciales:\nAdmin: campana@vet.com | Brigada: brigada@vet.com\nContraseña inicial: Ecuador2026',
                 textAlign: TextAlign.center,
